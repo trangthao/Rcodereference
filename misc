@@ -1,0 +1,32 @@
+######### MISC #########
+## xtable: Export Tables to LaTeX or HTML
+https://cran.r-project.org/web/packages/xtable/index.html
+
+## texreg
+https://github.com/leifeld/texreg
+https://cran.r-project.org/web/packages/texreg/vignettes/texreg.pdf
+
+## Create Awesome HTML Table with knitr::kable and kableExtra
+https://cran.r-project.org/web/packages/kableExtra/vignettes/awesome_table_in_html.html
+
+## BOOKDOWN
+https://bookdown.org/
+
+## Advanced R
+https://adv-r.hadley.nz/
+
+## Exploratory Data Analysis with R
+https://leanpub.com/exdata
+
+## R Programming for Data Science
+https://leanpub.com/rprogramming
+
+## Report Writing for Data Science in R
+https://leanpub.com/reportwriting
+
+## Efficient R programming
+https://csgillespie.github.io/efficientR/
+
+## Stats 337: Readings in Applied Data Science
+https://github.com/hadley/stats337
+
