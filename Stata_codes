@@ -15,6 +15,9 @@ https://janditzen.github.io/xtdcce2/
 ## xtbreak - estimating and testing for many known and unknown structural breaks in time series and panel data.
 https://janditzen.github.io/xtbreak/
 
+## panelview_stata
+https://github.com/xuyiqing/panelview_stata
+
 ## https://sites.google.com/site/medevecon/code?authuser=0 *****
 
 ## Stata guide
@@ -47,6 +50,9 @@ https://github.com/jngod2011/Stata_for_Econometrics
 ## margins **
 https://github.com/leeper/margins
 
+## margins **
+http://economicspsychologypolicy.blogspot.com/2014/09/list-of-resources-for-stata-commands.html
+
 ## Stata4Econ ****
 https://github.com/FanWangEcon/Stata4Econ
 
@@ -64,3 +70,34 @@ https://github.com/worldbank/stata-tables
 
 ## Stata to R *
 https://github.com/EconometricsBySimulation/RStata/wiki/Dictionary:-Stata-to-R
+
+## Creating Publication-Quality Tables in Stata **
+https://www.ssc.wisc.edu/sscc/pubs/stata_tables.htm
+
+## Causal inference with observational dataCausal inference with observational data
+https://www.stata.com/meeting/germany09/nichols.pdf
+
+## Recent Developments in Multilevel Modeling
+https://www.stata.com/meeting/6nasug/gutierrez_boston07.pdf
+
+## Panel data methods for microeconometrics using Stata
+https://www.stata.com/meeting/wcsug07/cameronwcsug.pdf
+
+## Econometric analysis of dynamic panel-data models
+using Stata
+https://www.stata.com/meeting/snasug08/drukker_xtdpd.pdf
+
+## Generalized Linear Models
+https://data.princeton.edu/wws509/
+
+## Stata to latex
+https://statatexblog.com/page/2/
+
+## An Introduction to Modern Econometrics Using Stata
+https://www.stata-press.com/books/preview/baum-preview.pdf
+
+## Stata tips
+https://medium.com/the-stata-guide/the-awesome-stata-tips-collection-6805afdedffa
+https://github.com/asjadnaqvi/The-Stata-Guide
+
+https://github.com/erikgahner/awesome-statistics
