@@ -1,4 +1,7 @@
 ##############Data visualization#################
+https://exts.ggplot2.tidyverse.org/gallery/
+https://exts.ggplot2.tidyverse.org/ggseas.html
+
 # ggvis: first visualization using `layer_points` function
 MyData %>% 
   ggvis(~Server, ~Nodes) %>%
@@ -56,4 +59,80 @@ ggplot(MyData, aes(x=IP, y=Nodes)) +
        subtitle="IP Vs Nodes",
        caption="Author: Isaac Arnault")
        
-       
+# bar chart with words for captions
+ggplot(data_categories_summarised, aes(x = reorder(animal_long, value), y = value)) + 
+  geom_col(fill = 'royalblue4', width = 0.7) +
+  geom_text(aes(label = scales::percent(value, accuracy = 1)), vjust = 0.5, hjust = 1.2, color = "white", size = 4) +
+  scale_y_continuous(expand = c(0, 0)) +
+  coord_flip() +
+  labs(title = "What is your favourite animal?",
+       subtitle = "Percent of respondents") +
+  theme(
+    plot.title = element_text(size = 18, margin = margin(10, 0, 0, 0)),
+    plot.subtitle = element_text(size = 12, margin = margin(10, 0, 10, 0), color = "gray"),
+    panel.background = element_rect(fill = NA),
+    panel.grid.major = element_blank(),
+    axis.ticks = element_blank(),
+    axis.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.text.y = element_text(size = 11, margin = margin(0, 5, 0, 0)),
+  )
+  
+ https://appsilon.com/data-visualization-best-practices-bar-plots/
+ 
+ 
+ # ggplot
+ #patchwork
+ https://github.com/thomasp85/patchwork#patchwork
+ 
+library(ggplot2)
+library(patchwork)
+
+p1 <- ggplot(mtcars) + geom_point(aes(mpg, disp))
+p2 <- ggplot(mtcars) + geom_boxplot(aes(gear, disp, group = gear))
+p3 <- ggplot(mtcars) + geom_smooth(aes(disp, qsec))
+p4 <- ggplot(mtcars) + geom_bar(aes(carb))
+
+#gganimate
+https://gganimate.com/
+
+#ggstatsplot
+https://github.com/IndrajeetPatil/ggstatsplot
+
+#esquisse
+https://github.com/dreamRs/esquisse
+
+#ggthemes
+https://github.com/jrnold/ggthemes
+
+#hrbrthemes
+https://github.com/hrbrmstr/hrbrthemes
+
+#ggrepel
+https://github.com/slowkow/ggrepel
+
+#ggraph
+https://github.com/thomasp85/ggraph
+
+#ggpubr
+https://rpkgs.datanovia.com/ggpubr/
+
+#ggfortify
+https://github.com/sinhrks/ggfortify
+
+#ggrepel
+https://github.com/slowkow/ggrepel
+
+#ggalt
+https://github.com/hrbrmstr/ggalt
+
+#ggtech
+https://github.com/ricardo-bion/ggtech
+
+#waffle
+https://github.com/hrbrmstr/waffle
+
+#r2d3
+https://rstudio.github.io/r2d3/
+
+#
