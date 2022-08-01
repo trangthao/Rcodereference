@@ -1,0 +1,51 @@
+graph twoway scatter lexp gnppc #Drawing a Scatterplot
+
+graph export scatter.png, width(500) replace
+(file scatter.png written in PNG format)
+
+graph twoway (scatter lexp loggnppc) (lfit lexp loggnppc) #Plotting the Data and a Linear Fit
+
+graph export fit.png, width(500) replace
+(file fit.png written in PNG format)
+
+#SCATTER PLOT
+scatter mpg weight
+scatter mpg headroom weight
+scatter mpg weight in 1/15, mlabel(make)
+line le year
+twoway connected close date in 1/15
+https://www.stata.com/support/faqs/graphics/gph/graphdocs/range-plot-with-area-shading/
+
+#Tip: Graph tabs
+sysuse auto, clear
+set autotabgraphs on
+scatter price    mpg, name(graph1, replace)
+scatter price length, name(graph2, replace)
+set autotabgraphs off
+scatter price    mpg, name(graph1, replace)
+scatter price length, name(graph2, replace)
+
+## Stata-schemes *
+https://github.com/asjadnaqvi/Stata-schemes
+
+#PICK GOOD DEFAULT:
+## stata-scheme-modern ***
+https://github.com/mdroste/stata-scheme-modern
+Putting 4 panels on a page? You can maximize the size of the figures squaring them up. I like to add `xsize(4.6)`.
+
+Putting 2 panels on a page? Or 1 panel on a widescreen slide, because you've listened to 
+@paulgp
+'s 16:9 slide gospel? Use all your horizontal space: `xsize(8)`
+
+#To change the fonts of your Stata graphs to match the default font in a LaTeX paper:
+
+1. Download and install the Latin Modern Roman font on your computer: https://fontsquirrel.com/fonts/Latin-Modern-Roman
+2. Change the font in under Stata's "Graph Preferences" (see attached screenshot for OS X)
+
+##  blindschemes
+https://www.danbischof.com/blog/2021/STATAFigureSchemes/
+
+## cleanplots
+https://www.trentonmize.com/software/cleanplots
+
+## http://www.maartenbuis.nl/workshops/graphs_in_stata/workshop.html
