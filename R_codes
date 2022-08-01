@@ -2,6 +2,32 @@
 https://exts.ggplot2.tidyverse.org/gallery/
 https://exts.ggplot2.tidyverse.org/ggseas.html
 
+# Be Awesome in ggplot2: A Practical Guide to be Highly Effective - R software and data visualization *
+http://www.sthda.com/english/wiki/be-awesome-in-ggplot2-a-practical-guide-to-be-highly-effective-r-software-and-data-visualization
+
+# A GGPLOT2 TUTORIAL FOR BEAUTIFUL PLOTTING IN R
+https://cedricscherer.netlify.app/2019/08/05/a-ggplot2-tutorial-for-beautiful-plotting-in-r/
+
+# Reproducible Research Course
+http://eriqande.github.io/rep-res-web/lectures/ggplot_1_pole_vault_example.html
+
+# THE EVOLUTION OF A GGPLOT (EP. 1)
+https://cedricscherer.netlify.app/2019/05/17/the-evolution-of-a-ggplot-ep.-1/
+
+# Data Visualization with R
+https://rkabacoff.github.io/datavis/
+
+# Circular Visualization in R
+https://jokergoo.github.io/circlize_book/book/
+
+# Fundamentals of Data Visualization
+https://clauswilke.com/dataviz/
+
+# Data Science for Psychologists
+https://bookdown.org/hneth/ds4psy/
+
+# 
+
 # ggvis: first visualization using `layer_points` function
 MyData %>% 
   ggvis(~Server, ~Nodes) %>%
@@ -135,4 +161,139 @@ https://github.com/hrbrmstr/waffle
 #r2d3
 https://rstudio.github.io/r2d3/
 
-#
+## ggchicklet
+https://github.com/hrbrmstr/ggchicklet
+
+## ggcorrplot
+https://github.com/kassambara/ggcorrplot
+
+## ggmosaic
+https://github.com/haleyjeppson/ggmosaic
+
+## ggbeeswarm
+https://github.com/eclarke/ggbeeswarm
+
+## ggTimeSeries
+https://github.com/shrektan/ggTimeSeries
+
+## ggupset ***
+https://github.com/const-ae/ggupset
+
+## UpSetR ***
+https://github.com/hms-dbmi/UpSetR
+
+## complex-upset ***
+https://github.com/krassowski/complex-upset
+
+## ggfreehand ***
+https://github.com/dgrtwo/ggfreehand
+
+## ganttrify ***
+https://github.com/giocomai/ganttrify
+
+## ggstream ***
+https://github.com/davidsjoberg/ggstream
+
+## bulletchartr ***
+https://github.com/ACDIVOCATech/bulletchartr
+
+## treemapify ***
+https://github.com/wilkox/treemapify
+
+## ggthemr *****
+https://github.com/Mikata-Project/ggthemr
+
+## ggthemes ***
+https://github.com/jrnold/ggthemes
+
+## ggpomological ***
+https://github.com/gadenbuie/ggpomological
+
+## hrbrthemes ***
+https://github.com/hrbrmstr/hrbrthemes
+
+## vapoRwave ***
+https://github.com/moldach/vapoRwave
+
+## tvthemes
+https://github.com/Ryo-N7/tvthemes
+
+## visibly
+https://github.com/m-clark/visibly
+
+## XKCD *** funny packages
+http://xkcd.r-forge.r-project.org/
+
+## ggrough *** 
+https://github.com/xvrdm/ggrough
+
+## paletteer **
+https://github.com/EmilHvitfeldt/paletteer
+
+## harrypotter **
+https://github.com/aljrico/harrypotter
+
+## econocharts *****
+https://github.com/R-CoderDotCom/econocharts
+
+## geofacet ***
+https://hafen.github.io/geofacet/
+
+####### INSPIRATIONS #######
+## Exploring Minard's 1812 plot with ggplot2
+https://github.com/andrewheiss/fancy-minard
+
+## Replicating Flowingdata Population Charts in R
+https://www.stevejburr.com/post/replicating-flowingdata-population-charts-in-r/
+
+## Tidy Tuesday - 18-02-2020
+https://www.stevejburr.com/post/tidy-tuesday-18-02-2020/
+
+## DataViz: Recreate Economist Plot
+https://rpubs.com/tangerine/economist-plot
+
+## Recreating the vaccination heatmaps in R
+https://benjaminlmoore.wordpress.com/2015/04/09/recreating-the-vaccination-heatmaps-in-r/
+
+## Tidy Tuesday
+https://themockup.blog/posts/2021-04-01-three-years-of-tidytuesday/
+
+## How the BBC Visual and Data Journalism team works with graphics in R
+https://medium.com/bbc-visual-and-data-journalism/how-the-bbc-visual-and-data-journalism-team-works-with-graphics-in-r-ed0b35693535
+
+## Cookbook for R
+http://www.cookbook-r.com/Graphs/Bar_and_line_graphs_(ggplot2)/
+
+## Dual axis charts in ggplot2 - why they can be useful and how to make them **
+https://www.johnmackintosh.net/blog/2022-03-13-dual-axis/
+
+## https://mohdbilal87.github.io/dataviz-r/ **
+
+## https://r-graph-gallery.com/21-distribution-plot-using-ggplot2.html *****
+
+## Top 50 ggplot2 Visualizations - The Master List (With Full R Code) *****
+http://r-statistics.co/Top50-Ggplot2-Visualizations-MasterList-R-Code.html
+
+## Leaders’ Ages ***
+https://david.frigge.nz/posts/2018-11-leader-age/
+
+## https://david.frigge.nz/posts/2016-10-whither-local-democracy/ ***
+
+## https://www.storytellingwithdata.com/blog ***
+
+## https://www.tableau.com/about/blog/2018/8/flights-world-part-ii-how-map-great-circle-routes-newest-tableau-release-92811 **
+
+## https://z3tt.github.io/hands-on-ggplot2/ *
+
+## Data Visualization with R **
+https://www.kaggle.com/code/muslump/data-visualization-with-r
+
+## R : Challenge of 100+ Visualization in R ***
+https://www.kaggle.com/code/saife245/r-challenge-of-100-visualization-in-r/notebook
+
+## https://www.data-to-viz.com/ *******
+
+## BBC Visual and Data Journalism cookbook for R graphics ***
+https://bbc.github.io/rcookbook/
+
+## 
