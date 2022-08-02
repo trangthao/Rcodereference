@@ -1,4 +1,5 @@
 ## Examining the data
+duplicates tag, gen() \\ fix unique id issues
 list country* year year pop \\The star after “country” works as a place holder and tells Stata to include all variables that start with “country”
 list in 45/49 \\ the observation 45 to 49
 list in 50/l \\the observations from 50 until the last observation (lower case L)
@@ -74,6 +75,9 @@ sum i.ctyno#i.year \\Using one # tells Stata to ignore the level for each variab
                    \\Doubling up the #, i.e.i.ctyno##i.year makes the command account for both dummies for each country, each year and each interaction
                    \\category is chosen as base can be manipulated by using ib(z). Rather than i. as prefix. Where z can be first, last, freq
                     \\(for the most frequent category) or #1,#2, etc for the first, second, etc. category
+gen medicareeligible=(age>65) \\This will mistakenly categorize anyone with missing age as medicare eligible
+gen medicareeligible=(age>65) if age!=. \\instead usse this
+gen medicareeligible=(age>65 & age<.) \\different 
                     
 ## Lags and leads
 so countrycode year
@@ -82,6 +86,8 @@ so country year
 by country: gen leadpop=pop[_n+1] if year==year[_n+1]-1 \\a fairly error prone method of accounting for missing
 
 ##Fillin and expand
+/*Stata treats missing values (“.”) as ∞*/
+
 fillin country year \\This creates new missing observations wherever a country-year combination did not previously exist
 expand 2 if _n==1 \\creates 2 observations identical to observation number one (_n==1) and places the additional observation at the
                    \\end of the dataset, i.e observation number _N
@@ -509,3 +515,6 @@ https://personal.lse.ac.uk/lembcke/ecStata/2010/MResStataNotesOct2010PartA.pdf
 
 ## Advanced Stata Topics **
 https://personal.lse.ac.uk/lembcke/ecStata/2009/MResStataNotesFeb2009PartB.pdf
+
+## Programming with Stata *** //Good advice for mistakes
+https://www.povertyactionlab.org/sites/default/files/research-resources/IAPStataWorkshopSlides.pdf
