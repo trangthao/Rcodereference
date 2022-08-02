@@ -1,7 +1,16 @@
 tabstat #Table of descriptive statistics
 Codebook #Show codebook information for file
 
-
+## Combining and dividing variables
+gen str7 ctyyear=country_code+yearcode \\joining country code and year to get AGO1950, AGO1951, and so on
+gen str2 yr=substr(yearcode,3,2) \\The first term in parentheses is the string variable that you are extracting from, the second is the position of the first character you
+                                  \\want to extract (--X-), and the third term is the number of characters to be extracted (--XX)
+gen str2 yr=substr(yearcode,-2,2) \\select your starting character by counting from the end (2 positions from the end instead of 3 positions from the start):
+gen str10 country=substr(code,1,strpos(code," ")-1) \\ The strpos() function gives the position of the second argument in the first argument, so here it tells you what position the
+                                                    \\blank space takes in the code variable. The country substring then extracts from the code variable, starting at the first
+                                                    \\character, and extracting a total of 3-1=2 characters for UK, 8-1=7 characters for Ireland and so on.
+gen str10 city=trim(substr(code, strpos(code," "),11)) \\The trim() function removes any leading or trailing blanks. So, the city substring extracts from the code variable, starting at the blank
+                                                         \\space, and extracting a total of 11 characters including the space, which is then trimmed of
 
 
 ## xtdcce2 - Estimating heterogeneous coefficient models using common correlated effects in a dynamic panel with a large number of observations over groups and time periods.
