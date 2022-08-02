@@ -12,6 +12,238 @@ gen str10 country=substr(code,1,strpos(code," ")-1) \\ The strpos() function giv
 gen str10 city=trim(substr(code, strpos(code," "),11)) \\The trim() function removes any leading or trailing blanks. So, the city substring extracts from the code variable, starting at the blank
                                                          \\space, and extracting a total of 11 characters including the space, which is then trimmed of
 
+## Dummy variables
+xi i.country \\  generates 5 dummy variables, omitting the sixth
+encode country, gen(ctyno) \\ factor variables which achieve the same result as xi but avoid the clutter. Unlike xi, factor variables work only on
+                           \\numerical variables, so we might have to encode string variables before using factor commands.
+sum i.ctyno#i.year \\Using one # tells Stata to ignore the level for each variable and only report the interaction
+                   \\Doubling up the #, i.e.i.ctyno##i.year makes the command account for both dummies for each country, each year and each interaction
+                   \\category is chosen as base can be manipulated by using ib(z). Rather than i. as prefix. Where z can be first, last, freq
+                    \\(for the most frequent category) or #1,#2, etc for the first, second, etc. category
+                    
+## Lags and leads
+so countrycode year
+by countrycode: gen lagpop=pop[_n-1] if year==year[_n-1]+1
+so country year
+by country: gen leadpop=pop[_n+1] if year==year[_n+1]-1 \\a fairly error prone method of accounting for missing
+
+##Fillin and expand
+fillin country year \\This creates new missing observations wherever a country-year combination did not previously exist
+expand 2 if _n==1 \\creates 2 observations identical to observation number one (_n==1) and places the additional observation at the
+                   \\end of the dataset, i.e observation number _N
+replace year=1961 if _n==_N
+replace pop=. if _n==_N
+
+## Interpolation and extrapolation
+so country
+by country: ipolate pop year, gen(ipop) \\The first variable listed after the ipolate
+                                        \\command is the variable you actually want to interpolate, the second is the dimension along which you want to interpolate
+so country
+by country: ipolate pop year, gen(ipop) epolate
+
+## Splicing data from an additional source
+gen temp1=pop61/pop56 if country==“GER” & year==1970
+egen diff=mean(temp1), by(country)
+replace pop61=pop56*diff if pop61==. & year<1970
+
+## Imputing missing values from the data
+mi set wide
+mi register imputed grgdpch
+mi register regular kc kg ki openk cgdp pop year \\We will only impute missing values for grgdpch, the other variables are treated as regular variables (even though they might
+                                                 \\contain missing values)
+mi impute regress grgdpch kc kg ki pop cgdp, add(5) force \\ choose an imputation method and to define the number of repeated samples
+mi estimate: regress openk grgdpch kc kg ki pop cgdp, cluster(country) \\ run our estimation (e.g. a regression where
+                                                                       \\ we use per capita GDP to explain openness of an economy).
+                                                                       \\ we will probably have to make a
+                                                                       \\strong assumption on the type of nonrandomness in the missings
+
+
+## Panel Data Manipulation: Long versus Wide data sets
+reshape long pop, i(country_code) j(year) \\from wide to long
+                                          \\ in the reshape long case, Stata will reshape all variables that start with the letters you put behind long
+                                          \\The i() option specifies the variable(s) whose unique values denote a logical observation in wide format
+                                          \\The j() specifies the variable whose unique values denote a sub-observation
+                                          \\In long format, i() and j() together completely identify each observation.
+reshape wide pop, i(country_code) j(year) \\from long to wide
+reshape wide pop, i(year) j(country) string \\you need to specify the string option when j() is a string variable
+
+## Estimation
+#d; \\The delimit command changes what Stata perceives as the end of a command. Normally we write one command per line, that is
+    \\the end of a line denotes the end of a command as well. #delimit introduces a character – the semicolon (;) – to denote the
+    \\end of a command
+graph twoway scatter y h,
+scheme(s2mono) ytitle("real GDP per worker")
+xtitle("average Human Capital in 1995")
+note("Source: Penn World Table Version 6.1, Barro and Lee (2001)");
+#d c
+
+#d;
+graph twoway scatter y h,
+scheme(s2mono) ytitle("real GDP per worker")
+xtitle("average Human Capital in 1995")
+note("Source: Penn World Table Version 6.1, Barro and Lee (2001)"
+, margin(medium))
+graphregion(fcolor(white) lpattern(solid) lcolor(black) lwidth(medium));
+#d cr
+
+#d;
+graph twoway
+(scatter y h if oecd != 1, mstyle(p1))
+(scatter y h if oecd == 1, mstyle(p1) mlabel(iso)) \\To seperate to plots within one graph we can either surround each plot command by
+                                                    \\parentheses – () – or use two bars – || –, both are fine. Note that the plots are drawn in the order that we use in the command,
+                                                     \\i.e. the first plot will be the backmost and each additional plot will be layered on top of it
+, scheme(s2mono) ytitle("real GDP per worker")
+xtitle("average Human Capital in 1995")
+note("Source: Penn World Table Version 6.1, Barro and Lee (2001)"
+, margin(medium))
+graphregion(fcolor(white) lpattern(solid) lcolor(black) lwidth(medium))
+legend(off);
+#d cr
+graph save “H:\ECStata\MyFirstGraph”, replace
+graph export “H:\ECStata\MyFirstGraph.png”, replace
+
+## Estimation syntax
+/* There are many different models of estimation. The main commands include regress, logit, logistic, sureg.
+Most have a similar syntax:
+command varlist [weight] [if exp] [in range] [, options]
+1st variable in the varlist is the dependent variable, and the remaining are the independent variables.
+You can use Stata's syntax to specify the estimation sample; you do not have to make a special dataset.
+You can, at any time, review the last estimates by typing the estimation command without arguments.
+The level() option to indicate the width of the confidence interval. The default is level(95) */
+
+/* post-estimation commands
+You can recall the estimates, VCM, standard errors, etc…;
+You can carry out hypothesis testing => test (Wald tests), testnl (non-linear Wald tests), lrtest (likelihoodratio tests), hausman (Hausman's specification test);
+You can use Stata's predict command, which does predictions and residual calculations.*/
+
+/* weight
+sampling weight: pweight - Sampling weights are the inverse sampling probability, that is how many subjects of the
+population are represented by the observation
+analytic weights: aweight - Analytic weights are appropriate when you run commands on aggregated data. We might
+want to run a regression of county level average wages on county characteristics. Analytical weights are then
+the number of individuals that are used to calculate the average wage. The reason is that the more
+observations are used to calculate the average wage the more precisely the population average wage is
+estimated and therefore the more we want to rely on that information. Analytic weights should not be used in
+lieu of sampling weights when Stata does not allow the use of sampling weights!
+Frequency and importance weights - These two types of weights are less frequently used. Frequency weights are used when
+memory is conserved by dropping observations that have exactly the same values in all variables */
+
+/* anova analysis of variance and covariance
+cnreg censored-normal regression
+gmm Generalized methods of moments estimator
+heckman Heckman selection model
+intreg interval regression
+ivregress instrumental variables (2SLS) regression
+newey regression with Newey-West standard errors
+prais Prais-Winsten, Cochrane-Orcutt, or Hildreth-Lu regression
+qreg quantile (including median) regression
+reg ordinary least squares regression
+reg3 three-stage least squares regression
+rreg robust regression (NOT robust standard errors)
+sureg seemingly unrelated regression
+tobit tobit regression
+treatreg treatment effects model
+truncreg truncated regression
+xtabond Arellano-Bond linear, dynamic panel-data estimator
+xtintreg panel data interval regression models
+xtreg fixed- and random-effects linear models
+xtregar fixed- and random-effects linear models with an AR(1) disturbance
+xttobit panel data tobit models */
+
+regress y k, robust \\The regress command can be used with the robust option for estimating the standard errors using the Huber-White
+                    \\sandwich estimator (to correct the standard errors for heteroscedasticity)
+regress y k, cluster(country) \\The option cluster(group) allows for arbitrary correlation within specified groups (see Wooldridge, “Econometrics of Cross-Section
+                              \\ and Panel Data”, chapter 4, for more details and limitations of this approach).
+regress y k
+lvr2plot, mlabel(country) \\leverage-versus-residual squared plot). This is not available after the robust option. This plots the leverages of all observations against their squared residuals (the option mlabel labels points according to the
+                          \\variable listed in brackets behind it). Leverage tells you how large the influence of a single observation on the estimated
+                           \\coefficients is. Observations with high values could potentially be driving the results obtained (especially if they also have a large
+                          \\squared residual) so we should check whether excluding them changes anything.
+
+regress y k
+avplot k, mlabel(country) \\added-variable plot which graphs the partial correlation between a specified regressor and the dependent variable
+
+## Post-estimation
+/* adjust Tables of adjusted means and proportions
+estat vce Display covariance matrix of the estimators
+estimates Store, replay, display, ... estimation results
+hausman Hausman's specification test after model fitting
+lincom Obtain linear combinations of coefficients
+linktest Specification link test for single-equation models
+lrtest Likelihood-ratio test after model fitting
+margins Marginal effects or elasticities after estimation
+nlcom Nonlinear combinations of estimators
+predict Obtain predictions, residuals, etc. after estimation
+predictnl Nonlinear predictions after estimation
+suest Perform seemingly unrelated estimation
+test Test linear hypotheses after estimation
+testnl Test nonlinear hypotheses after estimation */
+
+regress y k h if oecd==1
+predict y_hat_oecd if oecd==1
+predict r_oecd if oecd==1, residual
+
+predict y_hat_oecd_full \\ The if statements are only necessary if you are running the analysis on a subset of dataset currently loaded into Stata. If you
+                        \\ want to make out-of-sample predictions, just drop the if statements in the predict commands.
+predict r_oecd_full, residual
+
+## Extracting results
+regress y k h y1985 ya, robust
+gen b_cons=_b[_cons] /* beta coefficient on constant term */
+gen b_k=_b[k] /* beta coefficient on GDP60 variable */
+gen se_k=_se[k] /* standard error */ 
+gen t_k=b_k/se_k \\create a variable containing t-statistics
+
+regress y k h y1985 ya, robust
+ereturn list
+
+## OUTREG2 – the ultimate tool in Stata/Latex or Word friendliness?
+## outtable, outtex, estout, mat2txt
+
+/* You can find the command by using ssc hot, which shows
+the top 10 of commands downloaded in the previous month. */
+
+## Dichotomous dependent variable 
+/* When the dependent variable is dichotomous (zero/one), you can run a Linear Probability Model using the regress command.
+You may also want to run a logit or a probit regression. The difference between these three models is the assumption that
+you make about the probability distribution of the latent dependent variable (LPM assumes an identity function, Logit a logistic
+distribution function, and Probit a normal distribution function). */
+
+## Panel Data 
+/* 1. Panel data should be kept in long form (with separate person and time variables). However, sometimes your data may
+be in wide form and needs to be converted to long form using the reshape command
+2. You have to declare your data a panel. One way to do this is using the xtset command. For this, you need two
+indicator variables, indicating the unit (panelvar) and time (timevar) dimensions of your panel. In our case, these are
+simply year and country. Note that panel dimensions cannot be string variables so you should first encode
+country. Once you have done this, use the xtset command */
+
+encode country, gen(country_no)
+xtset country_no year
+
+/* xtdes Describe pattern of xt data
+xtsum Summarize xt data
+xttab Tabulate xt data
+xtdata Faster specification searches with xt data
+xtline Line plots with xt data
+xtreg Fixed-, between- and random-effects, and population-averaged linear models
+xtregar Fixed- and random-effects linear models with an AR(1) disturbance
+xtgls Panel-data models using GLS
+xtpcse OLS or Prais-Winsten models with panel-corrected standard errors
+xtrchh Hildreth-Houck random coefficients models
+xtivreg Instrumental variables and two-stage least squares for panel-data models
+xtabond Arellano-Bond linear, dynamic panel data estimator
+xttobit Random-effects tobit models
+xtintreg Random-effects interval data regression models
+xtlogit Fixed-effects, random-effects, & population-averaged logit models
+xtprobit Random-effects and population-averaged probit models
+xtcloglog Random-effects and population-averaged cloglog models
+xtpoisson Fixed-effects, random-effects, & population-averaged Poisson models
+xtnbreg Fixed-effects, random-effects, & population-averaged negative binomial models
+xtgee Population-averaged panel-data models using GEE */
+
+## Describe pattern of xt data
+
+
 
 ## xtdcce2 - Estimating heterogeneous coefficient models using common correlated effects in a dynamic panel with a large number of observations over groups and time periods.
 https://janditzen.github.io/xtdcce2/
