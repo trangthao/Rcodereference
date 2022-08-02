@@ -1,5 +1,59 @@
+## Examining the data
+list country* year year pop \\The star after “country” works as a place holder and tells Stata to include all variables that start with “country”
+list in 45/49 \\ the observation 45 to 49
+list in 50/l \\the observations from 50 until the last observation (lower case L)
+list in -10/l \\the last command lists the last ten observations
+assert pop>0 \\verifies whether a certain statement is true or false
+inspect cgdp \\the distribution of a variable, including as it does a mini-histogram. It is also useful for identifying outliers or unusual values, or for spotting non-integers in a variable that should only contain integers
+
 tabstat #Table of descriptive statistics
 Codebook #Show codebook information for file
+tab year, sum(pop)
+tabstat \\it allows to save the results in special matrices, which can be used for other commands (we learn more about this later)
+
+## Organising datasets 
+mvdecode cgdp year pop, mv(-8 -9) \\This will replace all values of -8 and -9 in the three variables with the Stata missing value “.”
+drop country_code openc - gdp_growth \\all the variables between openc and gdp_growth are to be dropped
+keep if ((year>=1990 & year<=1995) | (year>=1997 & year<=1999))
+drop if _n <= 10 \\Dropping observations 1 to 10
+drop if _n == _N \\Dropping the last observation (number _N) in the dataset
+keep if country[_n] != country[_n-1]
+sort country year \\sorts the data by country, and then within each country code it sorts the data by year. This ensures that the first observation for every country (the one that is kept) will be 1950.
+                  \\Note that sorting is in ascending order (A,B,C or 1950, 1951, 1952)
+gsort –country \\sort in descending order
+
+## By-processing
+sort year
+by year: sum pop
+
+bysort country: keep if _n == 1 \\keep only the first observation for each country
+
+order *, alphabet
+order countrycode year pop, first
+order cgdp, after(year)
+
+gen total=_N \\total number of observations
+/*A couple of things to note. First, Stata‟s default data type is float, so if you want to create a variable in some other format (e.g.
+byte, string), you need to specify this. Second, missing numeric observations, denoted by a dot, are interpreted by Stata as a very
+large positive number */
+egen totalpop=total(pop), by(year) /* sum of the population per year */
+egen avgpop=mean(pop), by(year) /* average country pop per year */
+egen maxpop=max(pop) /* largest population value */
+egen countpop=count(pop) /* counts number of non-missing obs */
+egen groupid=group(country_code) /* generates numeric id variable for countries */
+
+egen totpop=sum(pop) /* sum total of population = single result*/
+gen cumpop=sum(pop) /* cumulative total of population */
+
+## Converting strings to numerics and vice versa
+encode country, gen(ctyno) \\This creates a new variable ctyno, which takes a value of 1 for CAN, 2 for FRA, and so on. The labels are automatically
+                            \\generated, based on the original string values – you can achieve similar results but without the automatic labels using .
+egen ctyno=group(country)
+codebook ctyno /* Tells you the link with the data* /
+decode ctyno, gen(ctycode) \\create a string variable from a numerical one
+tostring year, generate(yearcode)
+destring yearcode, generate(yearno)
+
 
 ## Combining and dividing variables
 gen str7 ctyyear=country_code+yearcode \\joining country code and year to get AGO1950, AGO1951, and so on
