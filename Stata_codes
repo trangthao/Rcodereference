@@ -242,6 +242,113 @@ xtnbreg Fixed-effects, random-effects, & population-averaged negative binomial m
 xtgee Population-averaged panel-data models using GEE */
 
 ## Describe pattern of xt data
+xtdes \\to see if your panel is actually balanced or whether there is large variation in the number of years for which
+       \\ each cross-sectional unit is reporting
+xtdes if cgdp!=.
+
+## Summarize xt data
+xtsum pop cgdp \\xtsum is similarly very useful and can be used in the same way that sum is used for non-panel data
+                \\s tells us the minimum and maximum, standard deviation and mean (in the overall case) of our selected variables (pop
+                \\and cgdp) in three ways that are of interest
+                
+xttab \\ a generalisation of the tabulate command for panel data and will show overall, within and between variation
+
+## Panel regressions
+# Fixed Effects Regression
+/* Fixed effects regression controls for unobserved, but constant, variation across the cross-sectional units. It is equivalent to
+including a dummy for each country/firm in our regression */
+xtreg grgdpch gdp60 openk kc kg ki, fe \\Notice that gdp60, the log of GDP in 1960 for each country, is now dropped as it is constant across time for each country and so is
+                                        \\ subsumed by the country fixed-effect
+
+# Between Effects
+xtreg grgdpch gdp60 openk kc kg ki, be \\This is equivalent to running a regression on the dataset of means by
+                                        \\ cross-sectional identifier. As this results in loss of information, between effects are not used much in practice
+
+# Random Effects
+xtreg grgdpch gdp60 openk kc kg ki, re \\Stata's randomeffects estimator is a weighted average of fixed and between effects
+
+# Choosing Between Fixed and Random Effects
+/* Choosing between FE and RE models is usually done using a Hausman test, and this is easily completed in Stata using the
+Hausman command. To run a Hausman test we need to run the RE and FE models and save the results using the store
+command. We then instruct Stata to retrieve the 2 sets of results and carry-out the test */
+
+xtreg grgdpch gdp60 openk kc kg ki, fe
+estimates store fe
+xtreg grgdpch gdp60 openk kc kg ki, re
+estimates store re
+hausman fe re \\ the null hypothesis is that there is no difference in the coefficients estimated by the efficient RE
+              \\ estimator and the consistent FE estimator. If there is no difference, then use the RE estimator – i.e. if the statistic is insignificant
+              \\ that is the Prob>chi2 is larger than .05 or .01. Otherwise, you should use FE, or one of the other solutions for unobserved
+               \\ heterogeneity as outlined in your Econometrics lectures
+               
+# Time series data
+tsset datevar
+/* tsset Declare a dataset to be time-series data
+tsfill Fill in missing times with missing observations in time-series data
+tsappend Add observations to a time-series dataset
+tsreport Report time-series aspects of a dataset or estimation sample
+arima Autoregressive integrated moving-average models
+arch Autoregressive conditional heteroskedasticity (ARCH) family of estimators
+tssmooth_ma Moving-average filter
+tssmooth_nl Nonlinear filter
+corrgram Tabulate and graph autocorrelations
+xcorr Cross-correlogram for bivariate time series
+dfuller Augmented Dickey-Fuller unit-root test
+pperron Phillips-Perron unit-roots test
+archlm Engle's LM test for the presence of autoregressive conditional heteroskedasticity
+var Vector autoregression models
+svar Structural vector autoregression models
+varbasic Fit a simple VAR and graph impulse-response functions
+vec Vector error-correction models
+varsoc Obtain lag-order selection statistics for VARs and VECMs
+varstable Check the stability condition of VAR or SVAR estimates
+vecrank Estimate the cointegrating rank using Johansen's framework
+irf create Obtain impulse-response functions and FEVDs
+vargranger Perform pairwise Granger causality tests after var or svar
+irf graph Graph impulse-response functions and FEVDs
+irf cgraph Combine graphs of impulse-response functions and FEVDs
+irf ograph Graph overlaid impulse-response functions and FEVDs */
+
+wofd(varname) daily to weekly
+mofd(varname) daily to monthly
+qofd(varname) daily to quarterly
+yofd(varname) daily to yearly
+
+gen daily=date(raw_date,"dmy") 
+gen daily=date(raw_date,"dm19y")
+
+weekly(stringvar,"wy")
+monthly(stringvar,"my")
+quarterly(stringvar,"qy")
+halfyearly(stringvar,"hy")
+yearly(stringvar,"y")
+
+gen mydate = mdy(month,day,year)
+gen year = int(date/10000)
+gen month = int((date-year*10000)/100)
+gen day = int((date-year*10000-month*100))
+gen mydate = mdy(month,day,year)
+
+reg x y if w(1995w9)
+sum income if q(1988-3)
+tab gender if y(1999)
+reg y x if tin(01feb1990,01jun1990) \\t tin() includes the beginning and end dates
+sum income if twithin(1988-3,1998-3) \\twithin() excludes them
+
+## Time-series tricks using dates
+reg income L.income \\This regresses income(t) on income(t-1)
+                    \\ These use the L.varname (to lag) and F.varname (to lead) commands
+                     \\If you wanted to lag income by more than one time period, you would simply change the L. to something like "L2." or
+                     \\"L3." to lag it by 2 and 3 time periods respectively
+
+\* Used in a similar way, the D.varname command will take the first difference, D2.varname will take the double
+difference (difference in difference), etc… *\
+
+\* The S.varname command is similar to the D.varname, except that the difference is always taken from the current
+observation to the n-th observation: In other words: S.income=income(t)-income(t-1) and S2.income=income(t)-
+income(t-2) *\
+
+
 
 
 
@@ -342,3 +449,6 @@ https://medium.com/the-stata-guide/the-awesome-stata-tips-collection-6805afdedff
 https://github.com/asjadnaqvi/The-Stata-Guide
 
 https://github.com/erikgahner/awesome-statistics
+
+## Introduction to Stata ***
+https://personal.lse.ac.uk/lembcke/ecStata/2010/MResStataNotesOct2010PartA.pdf 
