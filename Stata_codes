@@ -341,6 +341,32 @@ hausman fe re \\ the null hypothesis is that there is no difference in the coeff
               \\ that is the Prob>chi2 is larger than .05 or .01. Otherwise, you should use FE, or one of the other solutions for unobserved
                \\ heterogeneity as outlined in your Econometrics lectures
                
+# margins and marginsplot
+quietly margins, at(log_total_pats_bypop=(-10(0.5)1))
+marginsplot
+
+quietly margins, at(log_total_imports_bypop=(4(0.5)12))
+marginsplot
+
+quietly margins, at(log_labprod=(1(0.1)5))
+marginsplot
+
+quietly margins, at(log_total_pats_bypop=(-10(0.5)1) log_total_imports_bypop=(4(0.5)12)) saving(predictions, replace)
+use predictions, clear
+list _at1 _at2 _margin in 1/5
+rename _at1 log_total_pats_bypop
+rename _at2 log_total_imports_bypop
+rename _margin pr_adb_VAD
+list log_total_pats_bypop log_total_imports_bypop pr_adb_VAD in 1/5, abbreviate(9)
+twoway contour pr_adb_VAD log_total_pats_bypop log_total_imports_bypop
+twoway  (contour pr_adb_VAD log_total_pats_bypop log_total_imports_bypop, ccuts(-2(0.1)1)),                
+          xlabel(-10(0.5)1)                                                
+          ylabel(4(0.5)12, angle(horizontal))                             
+          xtitle("Logarit total patents by population")                                            
+          ytitle("Logarit total imports by population")                                            
+          ztitle("Predicted value of reshoring")                  
+          title("Predicted value of reshoring by automation innovation and adoption")
+               
 # Time series data
 tsset datevar
 /* tsset Declare a dataset to be time-series data
@@ -413,6 +439,30 @@ https://lukestein.github.io/stata-latex-workflows/gallery/
 estout/esttab
 http://www.jwe.cc/2012/03/stata-latex-tables-estout/
 https://github.com/alemartinello/write_mats
+
+xtreg adb_VAD log_total_pats_bypop log_total_imports_bypop log_labprod, fe //why using xtreg and reg the results are different?
+eststo
+xtreg adb_VAD log_total_pats_bypop log_total_imports_bypop log_labprod, re
+eststo
+xtreg adb_VAD log_total_pats_bypop log_total_imports_bypop log_labprod i.Year, fe
+eststo
+esttab
+
+eststo  clear
+eststo: xtreg adb_VAD log_total_pats_bypop log_total_imports_bypop log_labprod, fe //why using xtreg and reg the results are different?
+eststo: xtreg adb_VAD log_total_pats_bypop log_total_imports_bypop log_labprod, re
+eststo: xtreg adb_VAD log_total_pats_bypop log_total_imports_bypop log_labprod i.Year, fe
+
+esttab using "${OUTPATH}adb_VAD", ///
+nomtitles booktabs replace ///
+indicate("Country FE = _cons" "Year FE = *.Year", labels("\checkmark" "")) ///
+stats(N, labels("Observations")) ///
+label nobaselevels interaction("\$\times\$") substitute("=1" "") nonotes se star(* 0.10 ** 0.05 *** 0.01)
+
+# Outliers
+summarize adb_VAD_ind_coun, detail
+keep if inrange(adb_VAD_ind_coun, r(p1), r(p99))
+
 
 
 ## xtdcce2 - Estimating heterogeneous coefficient models using common correlated effects in a dynamic panel with a large number of observations over groups and time periods.
