@@ -408,8 +408,11 @@ difference (difference in difference), etc… *\
 observation to the n-th observation: In other words: S.income=income(t)-income(t-1) and S2.income=income(t)-
 income(t-2) *\
 
-
-
+## Export tables to latex ******
+https://lukestein.github.io/stata-latex-workflows/gallery/
+estout/esttab
+http://www.jwe.cc/2012/03/stata-latex-tables-estout/
+https://github.com/alemartinello/write_mats
 
 
 ## xtdcce2 - Estimating heterogeneous coefficient models using common correlated effects in a dynamic panel with a large number of observations over groups and time periods.
