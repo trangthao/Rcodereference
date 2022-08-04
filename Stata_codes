@@ -459,6 +459,148 @@ indicate("Country FE = _cons" "Year FE = *.Year", labels("\checkmark" "")) ///
 stats(N, labels("Observations")) ///
 label nobaselevels interaction("\$\times\$") substitute("=1" "") nonotes se star(* 0.10 ** 0.05 *** 0.01)
 
+# summary statistics
+replace human_development_index = human_development_index * 100
+lab var total_cases    "\hspace{0.25cm} Total cases (units)"
+lab var total_deaths   "\hspace{0.25cm} Total deaths (units)"
+lab var total_tests    "\hspace{0.25cm} Total tests (units)"
+lab var total_vaccinations  "\hspace{0.25cm} Total vaccinations (units)"
+lab var median_age        "\hspace{0.25cm} Median age (years)"
+lab var aged_65_older     "\hspace{0.25cm} Age 65+ (years)"
+lab var life_expectancy   "\hspace{0.25cm} Life expectancy (years)"
+lab var extreme_poverty   "\hspace{0.25cm} Extreme poverty (\%)"
+lab var human_development_index "\hspace{0.25cm} HDI (Index)"
+lab var gdp_per_capita    "\hspace{0.25cm} GDP per capita (USD)"
+lab var population_density  "\hspace{0.25cm} Population density (per sq km)" \\we add a space of 0.25 cm before the description of the variable label
+
+esttab using "./graphs/guide80/table8.tex", replace ////
+refcat(total_cases "\emph{COVID-19 indicators}" median_age "\vspace{0.1em} \\ \emph{Socio-economics indicators}", nolabel) /// \\refcat option that picks variables as reference points, and adds a name to each group of variables
+ cells("mean(fmt(%15.0fc %15.0fc %15.0fc %15.0fc  2)) sd min max count(fmt(0))") nostar unstack nonumber ///
+  compress nomtitle nonote noobs gap label booktabs f ///
+  collabels("Mean" "SD" "Min" "Max" "N")
+  
+# t-test
+gen dummy = .
+replace dummy = 0 if region==4  // MENA
+replace dummy = 1 if region==5  // SSA
+
+ttest life_expectancy, by(dummy) unequal
+
+global controls aged_65_older gdp_per_capita life_expectancy extreme_poverty population_density
+
+est clear
+ estpost ttest $controls  ///
+    , by(dummy) unequal
+    
+esttab, label \\stacks the mean and S.E. of the difference
+esttab, wide label \\shows the S.E. in the same row as the mean
+
+esttab using "./graphs/guide80/table9.tex", replace ///
+  cells("mu_1(fmt(3)) mu_2  b(star) se(par) count(fmt(0))") ///
+  collabels("MENA" "SSA" "Diff. (MENA - SSA)" "S.E." "Obs." ) ///
+  star(* 0.10 ** 0.05 *** 0.01) ///
+  label booktabs nonum gaps f noobs compress
+
+# Summary statistics by different control groups
+https://medium.com/the-stata-guide/the-stata-to-latex-guide-6e7ed5622856
+est clear
+eststo grp1: estpost summ new_cases new_deaths new_tests 
+eststo grp2: estpost summ new_cases new_deaths new_tests if region==2  // Europe and Central Asia
+eststo grp3: estpost summ new_cases new_deaths new_tests if continent=="Europe"
+eststo grp4: estpost summ new_cases new_deaths new_tests if human_development_index>80
+
+esttab grp*, main(mean %6.2f) aux(sd) mtitle("All" "ECA" "Europe" "High HDI")
+
+esttab grp* using "./graphs/guide80/table10.tex", replace ///
+  main(mean %15.2fc) aux(sd %15.2fc) nostar nonumber unstack ///
+   compress nonote noobs gap label booktabs f   ///
+   collabels(none) mtitle("All" "ECA" "Europe" "High HDI")
+   
+# Regressions
+replace new_deaths_per_million = . if new_deaths_per_million < 0
+replace new_cases_per_million  = . if new_cases_per_million < 0
+replace new_tests_per_thousand = . if new_tests_per_thousand < 0
+replace new_tests_per_thousand = . if new_tests_per_thousand > 100
+ren new_deaths_per_million         deaths_norm
+ren new_cases_per_million          cases_norm
+ren new_tests_per_thousand         tests_norm
+ren people_vaccinated_per_hundred  vaccine_norm
+replace gdp_per_capita = gdp_per_capita / 100000
+replace population_density = . if population_density> 4000 // Monaco is an outlier
+
+lab var deaths_norm         "Deaths (norm.)"
+lab var cases_norm          "Cases (norm.)"
+lab var tests_norm          "Tests (norm.)"
+lab var vaccine_norm        "Vaccines (norm.)"
+
+lab var stringency_index    "Stringency Index"
+lab var median_age          "Median age (years)"
+lab var aged_65_older       "Age 65+ (years)"
+lab var life_expectancy     "Life expectancy (years)"
+lab var extreme_poverty     "Extreme poverty (\%)"
+lab var human_development_index "HDI (Index)"
+lab var population_density  "Pop. density (pop/km$^2$)"
+lab var gdp_per_capita      "GDP per capita"
+
+est clear  // clear the stored estimates
+eststo: xtreg deaths_norm cases_norm tests_norm stringency_index, vce(cluster region)
+eststo: xtreg deaths_norm cases_norm tests_norm stringency_index aged_65_older gdp_per_capita life_expectancy extreme_poverty population_density, vce(cluster region)
+
+esttab
+esttab, label
+
+esttab, b(3) se(3) nomtitle label
+
+esttab, b(3) se(3) nomtitle label star(* 0.10 ** 0.05 *** 0.01)
+
+esttab using "./graphs/guide80/regression1_1.tex", replace  ///
+ b(3) se(3) nomtitle label star(* 0.10 ** 0.05 *** 0.01) ///
+ booktabs alignment(D{.}{.}{-1}) ///
+ title(My very first basic regression table \label{reg1})   ///
+ addnotes("Dependent variable: Deaths (norm.). A lot of endogeneity in this specification." "Data source: Our World in Data COVID-19 database.")
+ 
+\input{regression1_1.tex}
+
+esttab using "./graphs/guide80/regression1_2.tex", replace f  ///
+ b(3) se(3) nomtitle label star(* 0.10 ** 0.05 *** 0.01) ///
+ booktabs alignment(D{.}{.}{-1})
+ 
+# Regressions by different specifications
+est clear
+eststo: xtreg deaths_norm L(10).cases_norm L(10).tests_norm L(10).stringency_index  , re robust
+ estadd local  FE  "No"
+ estadd local  TE  "No"
+ 
+eststo: xtreg deaths_norm L(10).cases_norm L(10).tests_norm L(10).stringency_index i.date, re robust
+ estadd local  FE  "No"
+ estadd local  TE "Yes"
+ 
+eststo: xtreg deaths_norm L(10).cases_norm L(10).tests_norm L(10).stringency_index  , fe robust
+ estadd local  FE  "Yes"
+ estadd local  TE  "No"
+eststo: xtreg deaths_norm L(10).cases_norm L(10).tests_norm L(10).stringency_index i.date, fe robust
+ estadd local  FE  "Yes"
+ estadd local  TE  "Yes"
+eststo: xtreg deaths_norm L(10).cases_norm L(10).tests_norm L(10).stringency_index  , vce(cluster region)
+ estadd local RFE  "Yes"
+ estadd local  TE  "No"
+eststo: xtreg deaths_norm L(10).cases_norm L(10).tests_norm L(10).stringency_index i.date, vce(cluster region)
+ estadd local RFE  "Yes"
+ estadd local  TE  "Yes"
+
+esttab using "./graphs/guide80/regression1.tex", replace f  ///
+ b(3) se(3) ///
+ keep(L10.cases_norm L10.tests_norm L10.stringency_index) ///
+ coeflabel(L10.cases_norm "Cases (norm.) (t-10)" L10.tests_norm "Tests (norm.) (t-10)" L10.stringency_index "Stringency Index (t-10)" ) ///
+ star(* 0.10 ** 0.05 *** 0.01) ///
+ label booktabs nomtitle collabels(none) compress alignment(D{.}{.}{-1}) ///
+ scalars( "N Obs." "rho \$\rho\$" "TE Time FE" "FE Country FE" "RFE Region FE" ) sfmt(3)
+ 
+est clear
+eststo: xtreg deaths_norm L(10).cases_norm L(10).tests_norm L(10).stringency_index  , re robust
+ estadd local  FE  "No"
+ estadd local  TE  "No"
+
 # Outliers
 summarize adb_VAD_ind_coun, detail
 keep if inrange(adb_VAD_ind_coun, r(p1), r(p99))
