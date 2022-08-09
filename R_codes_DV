@@ -708,6 +708,88 @@ grid.rect(x = 1, y = 1 - 0.005, hjust = 1, vjust = 0,  gp = gpar(fill = "#e5001c
 
 
 
+## Another line plot
+https://rpubs.com/chidungkt/925015
+
+# Clear R environment: 
+
+rm(list = ls())
+
+# Load data: 
+library(tidyverse)
+
+read_csv("http://infographics.economist.com/databank/Economist_dogs.csv") -> line_data
+
+# Prepare data for ploting: 
+
+line_data %>% 
+  slice(1:10) %>% 
+  mutate_all(as.numeric) -> line_data
+
+names(line_data) <- c("year", "weight", "neck_size")
+
+my_labels <- as.character(2006:2015)
+
+case_when(my_labels == "2006" ~ "2006", TRUE ~ str_sub(my_labels, 3, 4)) -> my_labels
+
+library(showtext) # Package for using extra fonts. 
+
+my_font <- "Roboto" 
+
+# Load font for ploting: 
+
+font_add_google(name = my_font, family = my_font) 
+
+font_y <- "Roboto Condensed" 
+
+font_add_google(name = font_y, family = font_y)
+
+showtext_auto() # Automatically render text. 
+
+w_color <- "#973d4c"
+
+n_color <- "#2dc0d2"  
+
+bgr_color <- "#d9e9f0"
+
+grid_color <- "#b2c1ca"
+
+icon_color <- "#ed1c24"
+
+a <- 0.4
+b <- 0.25
+
+line_data %>% 
+  ggplot(aes(year, neck_size)) + 
+  geom_hline(yintercept = seq(38, 44, 2), color = grid_color, size = 0.71) + 
+  geom_line(color = w_color, size = 1.8) + 
+  scale_y_continuous(limits = c(37.5, 45.6), sec.axis = sec_axis(~. / 2), expand = c(0, 0)) + 
+  geom_line(data = line_data, aes(year, weight*2.1), color = n_color, size = 1.8) + 
+  scale_x_continuous(breaks = seq(2006, 2015), expand = c(0, 0), limits = c(2005.4, 2015.6), labels = my_labels) + ## how to adjust the year from .5 to 2006 2007 etc
+  labs(title = "Fit as a butcher's dog", 
+       subtitle = "Characteristics of dogs registered with the UK's\nKennel Club, average when fully grown", 
+       caption = "Source: Kennel Group | Graphic Designer: Nguyen Chi Dung") + 
+  theme(plot.background = element_rect(fill = bgr_color, color = NA)) + 
+  theme(panel.background = element_rect(fill = bgr_color, color = NA)) + 
+  theme(axis.title = element_blank()) + 
+  theme(plot.margin = unit(rep(0.7, 4), "cm")) + 
+  theme(panel.grid.major = element_blank()) + 
+  theme(panel.grid.minor = element_blank()) + 
+  theme(axis.ticks.y = element_blank()) +  
+  theme(axis.text.y = element_blank()) + 
+  annotate("text", x = 2006 - a, y = seq(38, 44, 2) + b, label = seq(38, 44, 2), color = w_color, family = font_y, size = 5) + 
+  annotate("text", x = 2015 + a, y = seq(38, 44, 2) + b, label = seq(18, 21, 1), color = n_color, family = font_y, size = 5) + 
+  annotate("text", x = 2006 + 0.5, y =  45, label = "Neck size, cm", color = w_color, family = font_y, size = 5.5) + 
+  annotate("text", x = 2014 + 0.8, y =  45, label = "Weight, kg", color = n_color, family = font_y, size = 5.5) + 
+  geom_segment(aes(x = 2006, xend = 2015, y = 37.5, yend = 37.5), color = "grey30", size = 0.75) + 
+  theme(axis.text.x = element_text(size = 15, family = font_y)) + 
+  theme(axis.ticks.length.x = unit(0.2, "cm")) + 
+  theme(plot.title = element_text(family = font_y, size = 21, face = "bold")) + 
+  theme(plot.caption = element_text(family = font_y, size = 12, color = "grey40", hjust = 0, vjust = -1))
+
+
+
+
 
 
 ## Bar plot
@@ -929,3 +1011,218 @@ ggplot() +
 library(grid)
 
 grid.rect(x = 0, y = 1, width = 0.07, height = 0.01, just = c("left", "top"), gp = gpar(fill = "black", col = "black"))
+
+
+## Lines and circle plots
+https://rpubs.com/chidungkt/926215
+#but the data description and the data not good (the visualization looks good though)
+#===========================================
+# A Short Introduction to wbstats package
+#===========================================
+
+# Clear R: 
+
+rm(list = ls())
+
+# Load wbstats package: 
+
+library(wbstats)
+
+# General information in list structure: 
+
+general_information <-  wb_cachelist
+
+# Show some basic information: 
+str(general_information, max.level = 1)
+
+
+#---------------------------------------------------------------------
+# Extract data frame that contains general information for countries
+#---------------------------------------------------------------------
+
+df_countries <- general_information[[1]]
+
+# Some insights, for example, income group: 
+
+library(tidyverse)
+
+df_countries %>% 
+  group_by(region) %>% 
+  count() %>% 
+  ungroup()
+
+#------------------------------
+#  Indicators provided by WB
+#------------------------------
+
+df_indicators <- general_information[[2]]
+
+# Number of indicators: 
+
+dim(df_indicators)
+
+# Description for indicators: 
+
+df_indicators %>% 
+  filter(str_detect(indicator, "Poverty")) %>% 
+  head() %>% 
+  View()
+
+# A list of indicators: 
+
+my_indicator <- c("SP.POP.TOTL", "SP.DYN.LE00.IN", "NY.GDP.PCAP.PP.CD")
+
+df_indicators %>% 
+  filter(indicator_id %in% my_indicator) %>% 
+  select(1:2)
+
+# Collect a given indicator for all nations: 
+
+educ_data <- wb_data(country = "all",
+                     indicator = "PRJ.POP.2024.3.MF",
+                     start_date = 2000,
+                     end_date = 2018)
+
+# Collect a given indicator for some nations: 
+
+educ_data_3nations <- wb_data(country = c("AFG", "AGO", "VNM"),
+                              indicator = "SH.TBS.MORT",
+                              start_date = 2016,
+                              end_date = 2017)
+
+# Collect some indicators for some nations: 
+
+educ_tuberculosis <- wb_data(country = c("AFG", "AGO", "VNM"),
+                             indicator = c("SH.TBS.MORT", "PRJ.POP.2024.3.MF"), 
+                             start_date = 2016,
+                             end_date = 2017) # Example 1. 
+
+
+#===========================================================
+#  A Case Study: Replicate chart created by The Economist
+#  with data collected from World Bank by using wbstats
+#===========================================================
+
+#---------------------------------------
+# Collect and prepare data for ploting 
+#---------------------------------------
+
+mydf <- wb_data(country = "all",
+                indicator = my_indicator, 
+                start_date = 2020,
+                end_date = 2020) 
+
+# Rename for some columns: 
+
+mydf %>% 
+  filter(!is.na(iso2c)) %>% 
+  na.omit() %>% 
+  rename(pop = SP.POP.TOTL, life = SP.DYN.LE00.IN, gdp = NY.GDP.PCAP.PP.CD) %>% 
+  select(-c(1, 2)) -> mydf_small_wide
+
+df_countries %>% 
+  filter(!is.na(capital_city)) %>% 
+  select(country, region, income_level) -> country_info
+
+full_join(mydf_small_wide, country_info, by = "country") -> mydf_small_wide
+
+mydf_small_wide %>% 
+  na.omit() %>% 
+  mutate(gdp = log10(gdp)) %>% 
+  mutate_at(.vars = c("gdp", "life"), .funs = function(x) {(x - min(x)) / (max(x) - min(x))}) -> df_for_ploting
+
+df_for_ploting %>% 
+  filter(life != 1, gdp != 1,  gdp != 0, life != 0) -> df_for_ploting
+
+df_for_ploting %>% 
+  slice(1:2) %>% 
+  mutate(gdp = 0:1, life = 0:1) -> df_bgr1
+
+df_for_ploting %>% 
+  slice(1:2) %>% 
+  mutate(gdp = 0:1, life = c(1, 1)) -> df_bgr2
+
+df_for_ploting %>% 
+  slice(1:2) %>% 
+  mutate(gdp = c(0, 0), life = c(1, 1)) -> df_abline 
+
+#-----------------------------------------------------------------------------
+# Replicate plot created by The Economist
+# Ref: https://www.economist.com/briefing/2016/03/26/too-much-of-a-good-thing
+#-----------------------------------------------------------------------------
+
+library(ggsci)
+
+library(showtext) # Package for using extra fonts. 
+
+my_font <- "Roboto Condensed" 
+
+# Load font for ploting: 
+
+font_add_google(name = my_font, family = my_font) 
+
+anno_font <- "Oswald"
+
+font_add_google(name = anno_font, family = anno_font) 
+
+showtext_auto() # Automatically render text. 
+
+p_title <- "A widespread effect"
+
+p_subtitle <- "Top four firms' share of total industry revenue, %\nUnited States, 893 industries, grouped by region"
+
+p_caption <- "Source: US Census Bureau | Graphic Designer: Nguyen Chi Dung"
+
+legend_y <- "Top four firms' share of total industry revenue, 2000, %"
+
+legend_x <- "Top four firms' share of total industry revenue, 1997, %"
+
+bgr_color <- "#d9e9f0"
+
+ggplot() + 
+  theme_minimal() + 
+  theme(plot.background = element_rect(fill = bgr_color, color = NA)) + 
+  geom_area(data = df_bgr2, aes(x = gdp, y = life), fill = "#008a84", alpha = 0.08) + 
+  geom_area(data = df_bgr1, aes(x = gdp, y = life), fill = bgr_color, color = "grey40", linetype = "longdash", size = 0.6) + ##create a shade of 45 degree
+  geom_hline(yintercept = seq(0, 1, 0.2), color = "white", size = 0.8) +  ##45 degree line becomes dash line
+  geom_area(data = df_bgr1, aes(x = gdp, y = life), fill = bgr_color, color = "grey40", linetype = "longdash", size = 0.6, alpha = 0) + ##highlight row lines
+  geom_point(data = df_for_ploting, aes(x = gdp, y = life, size = pop, color = region, fill = region), alpha = 0.5) + 
+  geom_point(shape = 21, alpha = 0.45, stroke = 0) + 
+  scale_size(range = c(1, 20)) + ## adjust the size of the circles
+  guides(size = FALSE)  + ## delete the population legends
+  scale_color_jama(name = "Region") + 
+  scale_fill_jama(name = "Region") + 
+  theme(legend.position = c(0.857, 0.27)) + ## adjust the position of the legend
+  theme(panel.grid = element_blank()) + 
+  scale_y_continuous(expand = c(0, 0), breaks = seq(0, 1, 0.2), labels = seq(0, 100, 20), limits = c(-0.015, 1.05)) + 
+  scale_x_continuous(expand = c(0.001, 0), breaks = seq(0, 1, 0.1), labels = seq(0,100, 10)) + 
+  theme(plot.margin = unit(c(0.5, 1, 0.5, 0.8), "cm")) + 
+  labs(title = p_title, subtitle = p_subtitle, caption = p_caption, x = legend_x, y = legend_y) + 
+  geom_hline(yintercept = 0, color = "grey30", size = 0.71) + 
+  geom_segment(aes(x = seq(0, 1, 0.1), xend = seq(0, 1, 0.1), y = 0, yend = -0.015), size = 1, color = "grey30") + 
+  theme(axis.title = element_text(family = my_font, color = "grey20", size = 11, face = "italic")) + 
+  theme(axis.text = element_text(family = my_font, color = "grey20", size = 11)) + 
+  theme(plot.title = element_text(family = my_font, size = 17, hjust = 0, face = "bold")) + 
+  theme(plot.subtitle = element_text(family = my_font, size = 11.6, color = "grey20")) + 
+  theme(plot.caption = element_text(family = my_font, color = "grey40", hjust = 0, size = 11, vjust = -1)) + 
+  theme(plot.title.position = "plot") +  
+  theme(plot.caption.position = "plot") + 
+  # Adjust legend: 
+  theme(legend.title = element_text(color = "grey20", family = my_font, size = 10.5, face = "bold", hjust = 0.05)) +
+  theme(legend.text = element_text(family = my_font, size = 10.2, color = "grey20", hjust = 0)) + 
+  guides(color = guide_legend(override.aes = list(size = 4.5))) + 
+  theme(legend.background = element_rect(fill = "white", color = NA)) + 
+  annotate("text", x = 0.1, y = 0.9, label = "BECOMING MORE\nCONCENTRATED", 
+           hjust = 0, color = "#008a84", alpha = 0.9, family = anno_font, size = 3.5) + 
+  annotate("text", x = 0.5, y = 0.1, label = "BECOMING LESS\nCONCENTRATED", 
+           hjust = 0, color = "#008a84", alpha = 0.9, family = anno_font, size = 3.5)
+
+
+# Make Financial Times icon: 
+
+library(grid)
+
+red_icon <- "#ed1c24"
+
+grid.rect(x = 0, y = 1, width = 0.018, height = 0.008*8, just = c("left", "top"), gp = gpar(fill = red_icon, col = red_icon))
+
