@@ -1,0 +1,931 @@
+##facet_wrap
+https://rpubs.com/chidungkt/927442?fbclid=IwAR0NC7O7wOPvDXkqK0itQ5F_xREVohbm8goJeqIodRyUUgmecjs7U8wfF04
+
+# Clear R environment: 
+
+rm(list = ls())
+
+# Load Covid-19 data: 
+
+covidData <- COVID19::covid19(level = 1) # Ref: https://covid19datahub.io/articles/r.html
+
+#===========================
+#  Prepare data for ploting
+#===========================
+
+library(tidyverse) # For data manipulation and visualization. 
+library(lubridate) # For date-time processing.
+
+some_nations <- c("France", "Chile", "Peru", "South Africa", "Belgium")
+
+covidData %>% 
+  filter(!administrative_area_level_1 %in% some_nations) %>% 
+  group_by(administrative_area_level_1) %>% 
+  slice(which.max(date)) %>% ## to slice the data
+  select(date, administrative_area_level_1, deaths) %>% 
+  ungroup() %>% 
+  arrange(-deaths) %>% ## arrange from biggest to smallest by deaths
+  slice(1:25) %>% 
+  pull(administrative_area_level_1) -> countries12
+
+covidData %>% 
+  select(date, administrative_area_level_1, deaths) %>% 
+  filter(administrative_area_level_1 %in% countries12) %>% 
+  rename(country = administrative_area_level_1) -> df12
+
+df12 %>% 
+  group_by(country) %>%
+  mutate(lag1_deaths = lag(deaths, n = 1L)) %>% ## getting lag data by previous year
+  mutate(deaths = replace_na(deaths, 0)) %>% 
+  mutate(lag1_deaths = replace_na(lag1_deaths, 0)) %>% ## replace na by 0
+  mutate(daily_deaths = deaths - lag1_deaths) %>% 
+  mutate(daily_deaths = ifelse(daily_deaths < 0, 0, daily_deaths)) -> df12
+
+library(zoo)
+
+df12 %>% 
+  mutate(avg7_daily_deaths = rollmean(daily_deaths, 7, align = "right", fill = NA)) %>% ## find moving average align = right is to find of previous years 
+  mutate(max_deaths_avg7 = max(avg7_daily_deaths, na.rm = TRUE)) %>% 
+  mutate(rate_to_max = 100*avg7_daily_deaths / max_deaths_avg7) -> df_for_ploting
+
+df_for_ploting %>% 
+  group_by(country) %>% 
+  slice(which.max(avg7_daily_deaths)) %>% 
+  mutate(rate_to_max = 100) %>% 
+  mutate(death_text = as.character(round(avg7_daily_deaths, 0))) -> day_max_deaths
+
+df_for_ploting %>% 
+  group_by(country) %>% 
+  slice(which.max(date)) %>% 
+  arrange(-deaths) %>% 
+  mutate(total_death_thousand = round(deaths / 1000, 0)) -> df_total_death
+
+df_for_ploting %>% 
+  group_by(country) %>% 
+  slice(which.min(date)) -> df_start_date
+
+df_start_date %>% 
+  mutate(my_m = month(date, label = TRUE, abbr = TRUE)) %>% 
+  mutate(my_d = day(date)) %>% 
+  mutate(my_d = case_when(str_count(my_d) == 1 ~ str_c("0", my_d), TRUE ~ as.character(my_d))) %>% 
+  mutate(date_text = str_c(my_m, my_d, sep = "-")) -> df_start_date
+  
+df_for_ploting %>% 
+  group_by(country) %>% 
+  slice(which.max(date)) %>% 
+  mutate(n_deaths = round(avg7_daily_deaths, 0) %>% as.character()) -> df_end_date
+
+#==========================
+#   Data Visualization
+#==========================
+
+theme_set(theme_minimal())
+
+library(gghighlight) # Ref: https://github.com/yutannihilation/gghighlight
+
+color_now_deaths <- "orange"
+color_max_deaths <- "#CE3240" 
+
+library(showtext) # Package for using extra fonts. 
+
+my_font <- "Roboto Condensed" 
+
+# Load font for ploting: 
+
+font_add_google(name = my_font, family = my_font) 
+
+showtext_auto() # Automatically render text. 
+
+p_title <- "<span style = 'color:#CE3240; font-size:17pt'>The Deadliest Days</span><span style = 'font-size:17pt'> Due to COVID-19 for Top-25 Countries by Total Deaths Confirmed"
+
+p_subtitle <- "Each panel shows the trajectory of confirmed deaths due to COVID-19 as percentage of daily deaths relative to the <i style='color:#CE3240'>worst day so far</i> for top-25 countries. For each day,<br>starting with the date of first reported death, the 7-day rolling average of confimed deaths per day is divided by the <b style='color:#CE3240;'>highest average number of daily deaths</b><br>so far defined as 100%. The <i style='color:orange;'>orange points</i> show the lastest number of cofirmed deaths due to COVID-19.</span>"
+
+p_caption <- "Note: Charts contain all confirmed deaths due to COVID-19 from January 01<sup>nd</sup> 2020 to July 26<sup>th</sup> 2022 for top-25 countries.<br>Data: Johns Hopkins University Center for Systems Science and Engineering (CSSE) | Graphic: Nguyen Chi Dung"
+
+library(ggtext) # Ref: https://cran.r-project.org/web/packages/ggtext/index.html
+
+df_for_ploting %>% 
+  ggplot(aes(x = date, y = rate_to_max, group = country)) + 
+  geom_line(alpha = 0.15, size = 0.7) + 
+  gghighlight(use_direct_label = FALSE, unhighlighted_params = list(color = "grey70")) +
+  geom_line(size = 0.7, color = "grey30") + 
+  geom_point(data = day_max_deaths, color = color_max_deaths, size = 2) + 
+  geom_text(data = day_max_deaths, aes(label = death_text), vjust = -0.5, size = 3.5, family = my_font) + 
+  geom_point(data = df_end_date, color = "black", size = 2, shape = 21, fill = color_now_deaths) + 
+  geom_text(data = df_end_date, aes(label = n_deaths), vjust = -0.5, size = 3.5, family = my_font) + 
+  facet_wrap(~ country) + 
+  coord_cartesian(clip = "off") + 
+  theme(axis.title = element_blank()) + 
+  theme(panel.grid.minor = element_blank()) + 
+  theme(panel.grid.major.x = element_blank()) + 
+  scale_y_continuous(limits = c(0, 125), breaks = seq(0, 100, 25), labels = str_c(seq(0, 100, 25), "%")) + 
+  theme(axis.text = element_text(family = my_font, size = 9)) + 
+  theme(plot.margin = unit(rep(0.6, 4), "cm")) + 
+  theme(panel.spacing = unit(0.5, "lines")) +  
+  theme(strip.text = element_text(color = "grey20", family = my_font, hjust = 0, size = 9, face = "bold", vjust = -1.5)) + 
+  labs(title = p_title, 
+       subtitle = p_subtitle, 
+       caption = p_caption) + 
+  theme(plot.title.position = "plot") +  
+  theme(plot.caption.position = "plot") + 
+  theme(plot.title = element_markdown(family = my_font, face = "bold", size = 18)) +  
+  theme(plot.subtitle = element_markdown(family = my_font, size = 11, color = "grey30")) + 
+  theme(plot.caption = element_markdown(family = my_font, color = "grey40", size = 10, hjust = 0, vjust = -4))
+  
+  
+  
+  
+  
+  
+## Likert scale
+https://rpubs.com/chidungkt/928081?fbclid=IwAR1D0P3QKPwnkdGRe01eRrWhVA89c-FoX19ryKi0fYMr63umUpEwoZI_QYk
+
+  # Clear R environment: 
+
+rm(list = ls())
+
+#===========================
+# Simulate data for ploting 
+#===========================
+
+size <- 100000
+
+responses <- c("Like them a lot", "Like them", "Neutrals", "Dislike them", "Dislike a lot")
+
+brand <- c(rep("Bounty", size), 
+           rep("Snickers", size), 
+           rep("Milky Way", size), 
+           rep("Mars", size), 
+           rep("Galaxy Caramel", size), 
+           rep("Twix", size), 
+           rep("Galaxy", size), 
+           rep("Teaser", size))
+
+cus_res <- c(sample(responses, size = size, replace = TRUE, prob = c(24, 36, 15, 11, 14)), 
+             sample(responses, size = size, replace = TRUE, prob = c(23, 42, 17, 9, 9)), 
+             sample(responses, size = size, replace = TRUE, prob = c(16, 52, 23, 6, 3)), 
+             sample(responses, size = size, replace = TRUE, prob = c(15, 57, 18, 7, 3)), 
+             sample(responses, size = size, replace = TRUE, prob = c(27, 46, 17, 8, 2)), 
+             sample(responses, size = size, replace = TRUE, prob = c(18, 57, 19, 5, 1)), 
+             sample(responses, size = size, replace = TRUE, prob = c(29, 51, 15, 4, 1)), 
+             sample(responses, size = size, replace = TRUE, prob = c(39, 42, 14, 4, 1)))
+
+data_cus <- tibble(brand = brand, cus_res = cus_res)
+
+
+#===========================
+# Prepare data for ploting
+#===========================
+
+data_cus %>% 
+  group_by(brand, cus_res) %>% 
+  count() %>% 
+  ungroup() %>% 
+  group_by(brand) %>% 
+  mutate(percent = 100*n / sum(n)) %>% 
+  mutate(percent = round(percent, 0)) %>% 
+  mutate(bar_text = paste0(percent, "%")) %>% 
+  ungroup() -> df_for_ploting
+
+df_for_ploting %>% 
+  filter(cus_res == responses[5]) %>% 
+  arrange(percent) %>% 
+  pull(brand) -> order_y
+
+
+df_for_ploting %>% 
+  mutate(brand = factor(brand, levels = order_y)) %>% 
+  mutate(cus_res = factor(cus_res, levels = responses[5:1])) -> df_odered
+
+#---------------------
+# Data Vis: Version 1
+#---------------------
+
+# Prepare colors for ploting: 
+
+col_dislike_alot <- "#e36c33"
+
+col_dislike <- "#edad88"
+
+col_neutral <- "#c7cdd1"
+
+col_like <- "#829cb2"
+
+col_like_alot <- "#3e6487"
+
+# Select Font for the graph: 
+
+my_font <- "Roboto Condensed"
+
+library(showtext)
+
+font_add_google(name = my_font, family = my_font)
+
+showtext_auto()
+
+library(ggtext) # Ref: https://cran.r-project.org/web/packages/ggtext/index.html
+
+# Prepare title + subtitle + caption: 
+
+p_title <- "Everyone <span style = 'color:#3e6487'>likes chocolates</span>, but Bounty and Snickers get <span style = 'color:#e36c33'>the most extreme opinions</span>"
+
+p_subtitle = "Likert scale is a type of rating scale commonly used in surveys. When responding to a Likert type question,\nrespondents simply state their level of agreement or disagreement on a symmetric agree-disagree scale."
+
+p_caption <- "Source: Nielsen Surveys | Graphic Designer: Nguyen Chi Dung"
+
+theme_set(theme_minimal())
+
+df_odered %>% 
+  ggplot(aes(y = brand, x = percent, fill = cus_res)) + 
+  geom_col(width = 0.8, position = "fill") + 
+  theme(legend.position = "top") + 
+  theme(plot.margin = unit(rep(0.7, 4), "cm")) +  
+  labs(title = p_title, subtitle = p_subtitle, caption = p_caption) + 
+  scale_fill_manual(values = c(`Like them a lot` = col_like_alot, 
+                               `Like them` = col_like, 
+                               `Neutrals` = col_neutral, 
+                               `Dislike them` = col_dislike, 
+                               `Dislike a lot` = col_dislike_alot)) + 
+  theme(text = element_text(family = my_font)) + 
+  theme(legend.title = element_blank()) + 
+  theme(legend.text = element_text(size = 11, family = my_font, color = "grey10")) + 
+  theme(legend.key.height = unit(0.35, "cm")) +  
+  theme(legend.key.width = unit(0.27*3, "cm")) + 
+  theme(axis.title = element_blank()) + 
+  theme(panel.grid.minor = element_blank()) + 
+  theme(panel.grid.major.x = element_line(color = "grey70", size = 0.8)) + 
+  scale_x_continuous(expand = c(0, 0), labels = paste0(seq(0, 100, 25), "%")) + 
+  scale_y_discrete(expand = c(0, 0)) + 
+  theme(axis.text = element_text(color = "grey30", size = 11, family = my_font)) + 
+  theme(plot.title = element_markdown(size = 16, face = "bold")) + 
+  theme(plot.caption = element_text(size = 10.5, color = "grey40", vjust = -1.5, hjust = 0)) + 
+  theme(plot.subtitle = element_text(size = 11.5, color = "grey10")) + 
+  theme(plot.title.position = "plot") +  
+  theme(plot.caption.position = "plot") -> gg1 
+
+
+# For displaying percent of "Dislike a lot": 
+
+df_odered %>% 
+  filter(cus_res == "Dislike a lot") -> df_for_text1
+
+# For displaying percent of "Like them a lot": 
+
+df_odered %>% 
+  filter(cus_res == "Like them a lot") -> df_for_text2
+
+# Ad text layers: 
+
+gg1 + 
+  geom_text(data = df_for_text1 %>% filter(percent > 2),
+            aes(y = brand, x = 1, label = bar_text), size = 4, color = "white", family = my_font, hjust = 1.2) +   
+  geom_text(data = df_for_text2, 
+            aes(y = brand, x = 0.03, label = bar_text), size = 4, color = "white", family = my_font)
+
+
+#---------------------
+# Data Vis: Version 2
+#---------------------
+
+ggplot() + 
+  geom_segment(aes(x = seq(0, 1, 0.25), xend = seq(0, 1, 0.25), y = 0.6, yend = 8.4), size = 0.7, color = "grey40") +  
+  geom_col(data = df_odered, 
+           aes(y = brand, x = percent, fill = cus_res), 
+           width = 0.8, position = "fill", show.legend = FALSE) +   theme(plot.margin = unit(rep(0.7, 4), "cm")) +  
+  labs(title = p_title, subtitle = p_subtitle, caption = p_caption) + 
+  scale_fill_manual(values = c(`Like them a lot` = col_like_alot, 
+                               `Like them` = col_like, 
+                               `Neutrals` = col_neutral, 
+                               `Dislike them` = col_dislike, 
+                               `Dislike a lot` = col_dislike_alot)) + 
+  theme(text = element_text(family = my_font)) + 
+  theme(axis.title = element_blank()) + 
+  theme(panel.grid = element_blank()) +
+  scale_x_continuous(expand = c(0, 0), labels = paste0(seq(0, 100, 25), "%")) + 
+  scale_y_discrete(expand = c(0, 0)) + 
+  theme(axis.text = element_text(color = "grey30", size = 11, family = my_font)) + 
+  theme(plot.title = element_markdown(size = 16, face = "bold")) + 
+  theme(plot.caption = element_text(size = 10.5, color = "grey40", vjust = -1.5, hjust = 0)) + 
+  theme(plot.subtitle = element_text(size = 11.5, color = "grey10")) + 
+  theme(plot.title.position = "plot") +  
+  theme(plot.caption.position = "plot") -> gg2 
+
+
+# http://daydreamingnumbers.com/blog/4-ways-to-visualize-likert-scales/: 
+
+gg2 + 
+  annotate("text", 
+           x = c(0.071, 0.42, 0.67, 0.803, 0.94),
+           y = 9, 
+           label = responses, 
+           vjust = 1.2, 
+           color = c(col_like_alot, col_like, col_neutral, col_dislike, col_dislike_alot), 
+           size = 4, 
+           fontface = "bold", 
+           family = my_font) + 
+  geom_text(data = df_for_text1 %>% filter(percent > 2),
+            aes(y = brand, x = 1, label = bar_text), size = 4, color = "white", family = my_font, hjust = 1.2) +   
+  geom_text(data = df_for_text2, 
+            aes(y = brand, x = 0.03, label = bar_text), size = 4, color = "white", family = my_font)
+            
+            
+ 
+ 
+ 
+ 
+ 
+ 
+ ## Bubble Chart
+ https://rpubs.com/chidungkt/926797
+ 
+ # Clear R einvironment: 
+rm(list = ls())
+
+# Load some R packages for data manipulation + visulization: 
+
+library(dplyr)
+library(ggplot2)
+
+# Simulate data for ploting: 
+
+samples <- 893
+
+r <- 0.85
+
+set.seed(29)
+
+data <- MASS::mvrnorm(n = samples, mu = c(0, 0), Sigma = matrix(c(1, r, r, 1), nrow = 2), empirical = TRUE)
+
+as.data.frame(data) -> df_fake
+
+df_fake %>% 
+  rename(x = V1, y = V2) %>% 
+  mutate_all(function(x) {((x - min(x)) / (max(x) - min(x)))}) %>% 
+  filter(!x %in% c(0, 1), !y %in% c(0, 1)) -> df_fake
+
+n <- nrow(df_fake)
+
+industry_names <- c("Wholesales", "Retail", "Finance", "Manufacturing", "Health care", "IT")
+
+k <- length(industry_names)
+
+set.seed(1)
+
+sample(industry_names, size = nrow(df_fake), replace = TRUE, prob = rep(1 / k, k)) -> industry
+
+set.seed(29)
+
+df_fake %>% 
+  mutate(industry = industry, size = sample(c(1, 10, 30, 100, 800), size = n, replace = TRUE, prob = c(0.4, 0.25, 0.2, 0.1, 0.05))) %>% 
+  mutate(industry = factor(industry, levels = industry_names)) -> df_fake
+
+# Function converts CMYK to HEX: 
+
+convert_CMYK_to_HEX <- function(C, M, Y, K) {
+  
+  C <- C / 100.0
+  M <- M / 100.0
+  Y <- Y / 100.0
+  K <- K / 100.0
+  
+  n.c <- (C * (1 - K) + K)
+  n.m <- (M * (1 - K) + K)  
+  n.y <- (Y * (1 - K) + K)
+  
+  r.col <- ceiling(255 * (1 - n.c))
+  g.col <- ceiling(255 * (1 - n.m))
+  b.col <- ceiling(255 * (1 - n.y))
+  
+  hex_color_code <- rgb(r.col, g.col, b.col, max = 255)
+  
+  return(hex_color_code)
+  }
+
+# Convert some CMKYs to HEX-color codes using by The Economist: 
+
+red_icon <- convert_CMYK_to_HEX(0, 100, 100, 0)
+
+who_color <- convert_CMYK_to_HEX(90, 50, 15, 5)
+
+ret_color <- convert_CMYK_to_HEX(85, 10, 0, 58)
+
+fin_color <- convert_CMYK_to_HEX(12, 30, 70, 0)
+
+man_color <- convert_CMYK_to_HEX(0, 75, 35, 45)
+
+hea_color <- convert_CMYK_to_HEX(80, 25, 50, 50)
+
+it_color <- convert_CMYK_to_HEX(27, 42, 25, 10)
+
+bgr_color <- "#cddee7"
+
+hig_color <- convert_CMYK_to_HEX(15, 0, 0, 10)
+
+ann_color <- "#6b9aae"
+
+p_title <- "A widespread effect"
+
+p_subtitle <- "Top four firms' share of total industry revenue, %\nUnited States, 893 industries, grouped by sector"
+
+p_caption <- "Source: US Census Bureau | Graphic Designer: Nguyen Chi Dung"
+
+legend_y <- "Top four firms' share of total industry revenue, 2000, %"
+
+legend_x <- "Top four firms' share of total industry revenue, 1997, %"
+
+library(showtext) # Package for using extra fonts. 
+
+my_font <- "Roboto Condensed" 
+
+# Load font for ploting: 
+
+font_add_google(name = my_font, family = my_font) 
+
+anno_font <- "Oswald"
+
+font_add_google(name = anno_font, family = anno_font) 
+
+showtext_auto() # Automatically render text. 
+
+#--------------------------------------------------
+#  Replicate bubble plot created by The Economist
+#--------------------------------------------------
+
+df_bgr2 <- tibble(x = 0:1, y = 0:1)
+
+bgr_color2 <- "#008a84"
+
+ggplot() + 
+  theme_minimal() + 
+  theme(plot.background = element_rect(fill = bgr_color, color = NA)) + 
+  geom_area(data = df_bgr2, aes(x = x, y = y), fill = bgr_color2, alpha = 0.1, 
+            orientation = "y", color = "grey40", linetype = "longdash", size = 0.7, alpha = 0) + 
+  geom_hline(yintercept = seq(0, 1, 0.2), color = "white", size = 0.8) +  
+  geom_point(data = df_fake, aes(x = x, y = y, size = size, color = industry, fill = industry), alpha = 0.35) + 
+  scale_size(range = c(1, 10)) + 
+  guides(size = FALSE)  + 
+  scale_fill_manual(values = c(Wholesales = who_color, 
+                               Retail = ret_color, 
+                               Finance = fin_color, 
+                               Manufacturing = man_color, 
+                               "Health care" = hea_color, 
+                               IT = it_color)) + 
+  scale_color_manual(values = c(Wholesales = who_color, 
+                                Retail = ret_color, 
+                                Finance = fin_color, 
+                                Manufacturing = man_color, 
+                                "Health care" = hea_color, 
+                                IT = it_color)) +  
+  theme(legend.position = c(0.12, 0.77)) + 
+  theme(panel.grid = element_blank()) + 
+  scale_y_continuous(expand = c(0, 0), breaks = seq(0, 1, 0.2), labels = seq(0, 100, 20), limits = c(-0.015, 1.05)) + 
+  scale_x_continuous(expand = c(0.001, 0), breaks = seq(0, 1, 0.1), labels = seq(0,100, 10)) + 
+  theme(plot.margin = unit(c(0.5, 1, 0.5, 0.9), "cm")) + 
+  labs(title = p_title, subtitle = p_subtitle, caption = p_caption, x = legend_x, y = legend_y) + 
+  geom_hline(yintercept = 0, color = "grey30", size = 0.71) + 
+  geom_segment(aes(x = seq(0, 1, 0.1), xend = seq(0, 1, 0.1), y = 0, yend = -0.015), size = 1, color = "grey30") + 
+  theme(axis.title = element_text(family = my_font, color = "grey20", size = 11.5, face = "italic")) + 
+  theme(axis.text = element_text(family = my_font, color = "grey20", size = 12)) + 
+  theme(plot.title = element_text(family = my_font, size = 18, hjust = 0, face = "bold")) + 
+  theme(plot.subtitle = element_text(family = my_font, size = 11, color = "grey20")) + 
+  theme(plot.caption = element_text(family = my_font, color = "grey40", hjust = 0, size = 11, vjust = -1)) + 
+  theme(plot.title.position = "plot") +  
+  theme(plot.caption.position = "plot") + 
+  # Adjust legend: 
+  theme(legend.text = element_text(family = my_font, size = 10.5, color = "grey20", hjust = 0)) + 
+  theme(legend.title = element_blank()) + 
+  guides(color = guide_legend(override.aes = list(size = 5))) +
+  theme(legend.background = element_rect(fill = NA, color = NA)) +
+  # theme(legend.background = element_rect(fill = alpha(bgr_color2, 0.1), color = NA)) +
+  annotate("text", x = 0.4, y = 0.9, label = "BECOMING MORE\nCONCENTRATED", 
+           hjust = 0, color = "#008a84", alpha = 0.9, family = anno_font, size = 3.5) + 
+  annotate("text", x = 0.7, y = 0.3, label = "BECOMING LESS\nCONCENTRATED", 
+           hjust = 0, color = "#008a84", alpha = 0.9, family = anno_font, size = 3.5)
+
+
+# Make Financial Times icon: 
+
+library(grid)
+
+red_icon <- "#ed1c24"
+
+grid.rect(x = 0, y = 1, width = 0.018, height = 0.008*8, just = c("left", "top"), gp = gpar(fill = red_icon, col = red_icon))
+
+
+
+
+
+
+
+## Rose diagram
+https://rpubs.com/chidungkt/819554?fbclid=IwAR1CGq4Oyp0ThF_glfxyVLZlVuqcRcOsnbW5x9qnQmK8JaQGJ8HP0FxiS6g
+#============================================================================
+#  R codes for recreating Rose Diagram as designed by Florence Nightingale
+#============================================================================
+
+
+# Clear our R environment: 
+rm(list = ls())
+
+# Load Nightingale data set: 
+data("Nightingale", package = "HistData")
+
+# Description about the data set: 
+?HistData::Nightingale
+
+# Load some R packages: 
+library(tidyverse) # for data manipulation and visualization.
+library(stringr) # for text prcessing.
+library(lubridate) # for date-time processing.
+library(hrbrthemes) # For using black theme.
+
+# Convert to long form and processing for some columns: 
+
+Nightingale %>% 
+  select(Date, Disease.rate, Wounds.rate, Other.rate) %>% 
+  gather(Cause, Deaths, -Date) %>% 
+  mutate(Cause = str_replace_all(Cause, "\\.rate", ""), Regime = rep(c("Before", "After"), time = 3, each = 12)) %>% 
+  mutate(Regime = factor(Regime, levels = c("Before", "After"))) %>%  
+  mutate(mo = month(Date, label = TRUE, abbr = TRUE)) -> longForm_data
+
+# Select Ubuntu Condensed font for ploting: 
+
+library(showtext)
+showtext.auto()
+font_add_google(name = "Ubuntu Condensed", family = "ubu")
+my_font <- "ubu"
+
+# Recreate Rose Diagram: 
+  
+
+longForm_data %>% 
+  ggplot(aes(x = mo, y = Deaths, fill = Cause)) +
+  geom_col(color = "grey20") + 
+  theme_modern_rc(base_family = my_font, subtitle_family = my_font) + 
+  scale_fill_manual(values = c("firebrick", "orange", "#365181"), name = "") +
+  scale_y_sqrt() +
+  facet_wrap(~ Regime) + 
+  coord_equal(ratio = 1) +  
+  coord_polar() +
+  labs(title = "Causes of Mortality in the Army in the East", 
+       subtitle = "Created by R Statistical Software", 
+       caption = "Data Source: Deaths from various causes in the Crimean War") + 
+  theme(legend.position = "top") + 
+  theme(text = element_text(family = my_font, size = 14)) + 
+  theme(axis.title.y = element_blank()) + 
+  theme(axis.title.x = element_blank()) + 
+  theme(axis.text.y = element_blank()) + 
+  theme(axis.ticks = element_blank()) + 
+  theme(plot.margin = unit(rep(0.7, 4), "cm")) + 
+  theme(plot.title = element_text(color = "white", family = my_font, size = 20)) + 
+  theme(plot.caption = element_text(color = "grey70", family = my_font, size = 11)) + 
+  theme(plot.subtitle = element_text(color = "grey70", size = 13)) +
+  theme(legend.text = element_text(color = "white", size = 12)) + 
+  theme(strip.text = element_text(color = "white", size = 14, face = "bold", family = my_font, hjust = 0.5))
+  
+  
+  
+  
+  
+  
+  ## Line plot + multiple fields
+  Economist-Style Plot using R
+  https://rpubs.com/chidungkt/562860?fbclid=IwAR2eAwgF6fHIvua9qrr2SiIM1eP6h4RbC9nnHx7rFv81T47U2uLM6yg1mwo
+  
+  #=======================================================================================
+#         References: 
+#   https://www.economist.com/graphic-detail/2016/10/03/greying-of-the-nobel-laureates
+#=======================================================================================
+
+# Load some packages and load data: 
+rm(list = ls())
+library(tidyverse)
+library(lubridate)
+library(grid)
+
+path <- "http://api.nobelprize.org/v1/laureate.csv"
+laureate <- read_csv(path)
+
+# Clear data: 
+mydf2 <- laureate %>% 
+  filter(gender != "org", !is.na(category)) %>% 
+  mutate(age = year - year(born), 
+         category = case_when(category == "chemistry" ~ "Chemistry", 
+                              category == "economics" ~ "Economics", 
+                              category == "literature" ~ "Literature", 
+                              category == "medicine" ~ "Medicine", 
+                              category == "peace" ~ "Peace", 
+                              TRUE ~ "Physics"))
+
+# Set order: 
+my_orders <- c("Medicine", "Physics", "Chemistry", "Economics", "Literature", "Peace")
+
+mydf2 %>% 
+  select(year, age, category) %>% 
+  na.omit() %>% 
+  mutate(category = factor(category, levels = my_orders)) -> mydf2
+
+# Set label: 
+label2 <- case_when(str_detect(my_orders, "Econ") ~ "Economics *", TRUE ~ my_orders)
+
+# Prepare data frame 1 for plotting text: 
+
+midPoint <- 0.5*(min(mydf2$year) + max(mydf2$year))
+
+dat_text <- tibble(category = factor(my_orders, levels = my_orders), 
+                   year = rep(midPoint, 6), 
+                   age = rep(105, 6)) 
+
+# Colours selected: 
+my_col <-  c("#04536e", "#7c2817", "#f15c42", "#3d6a51", "#eca324", "#12a4dc")
+my_font <- "Ubuntu Condensed"
+
+# Make a base draft: 
+
+mydf2 %>% 
+  ggplot(aes(year, age, colour = category)) + 
+  geom_point(show.legend = FALSE, size = 2, alpha = 0.5) + 
+  geom_smooth(method = "loess", show.legend = FALSE, se = FALSE, size = 1.8) + 
+  scale_color_manual(values = my_col) + 
+  facet_wrap(~ category, ncol = 6) + 
+  theme(strip.text.x = element_blank()) -> p
+
+# Prepare data frame 1 + 2 for plotting text: 
+
+text1 <- dat_text %>% 
+  filter(category == "Economics") %>% 
+  mutate(year = 1945, age = 95)
+
+text2 <- dat_text %>% 
+  filter(category == "Peace") %>% 
+  mutate(year = 1945, age = 23)
+
+text3 <- dat_text %>% 
+  filter(category == "Economics") %>% 
+  mutate(year = 1980, age = 97)
+
+
+text4 <- dat_text %>% 
+  filter(category == "Peace") %>% 
+  mutate(year = 1985, age = 25)
+
+# The first adjustment: 
+
+p + 
+  geom_text(data = dat_text, label = label2, family = my_font, fontface = "bold", size = 5) + 
+  guides(col = F) + 
+  geom_text(data = text1, label = "Oldest Winner\nLeonid Hurwicz, 90", family = my_font, size = 4.5) + 
+  geom_text(data = text2, label = "Youngest Winner\nMalala Yousafzai, 17", family = my_font, size = 4.5) + 
+  geom_curve(data = text3, xend = 2007, yend = 90, curvature = -0.5) + 
+  geom_curve(data = text4, xend = 2014, yend = 17, curvature = -0.5) -> p1
+
+# Finalize our plot: 
+
+p1 + 
+  scale_x_continuous(breaks = seq(1900, 2010, 25), labels = c("1900", " ", "50", " ", "2000")) + 
+  scale_y_continuous(sec.axis = sec_axis(~. *1), breaks = seq(0, 105, 25), limits = c(15, 105)) + 
+  theme(panel.grid.minor = element_blank()) + 
+  theme(panel.grid.major.x = element_blank()) + 
+  theme(panel.grid.major.y = element_line(size = 0.8)) + 
+  theme(axis.text.y.left = element_blank()) + 
+  theme(axis.ticks.y = element_blank()) + 
+  theme(axis.ticks.length = unit(0.15, "cm")) + 
+  theme(axis.text.x = element_text(size = 13, color = "grey20", family = my_font)) + 
+  theme(axis.text.y = element_text(size = 13, color = "grey20", family = my_font)) + 
+  theme(plot.margin = unit(c(0.7, 0.7, 0.7, 1), "cm")) + 
+  labs(x = NULL, y = NULL, 
+       title = "Senescience", 
+       subtitle = "Age of Nobel laureates, at the date of award", 
+       caption = "Data Source: Nobelprize.org") +  
+  theme(plot.title = element_text(face = "bold", size = 21, family = my_font, hjust = 0, color = "grey10")) + 
+  theme(plot.subtitle = element_text(size = 15, margin = margin(b = 20), hjust = 0, family = my_font, color = "grey20")) + 
+  theme(plot.caption = element_text(size = 11, family = my_font, color = "grey20")) 
+
+grid.rect(x = 0.015, y = 0.92, hjust = 1, vjust = 0, gp = gpar(fill = "#e5001c", lwd = 0))  
+grid.rect(x = 1, y = 1 - 0.005, hjust = 1, vjust = 0,  gp = gpar(fill = "#e5001c", lwd = 0)) 
+
+
+
+
+
+
+
+## Bar plot
+Make Our Bar Plot More Elegant
+https://rpubs.com/chidungkt/921091?fbclid=IwAR2_6XrVQ3jm8E96ce4hBKZI77CfiZLB5ilgFNqCHFNprmbH6hOJ9CF6LkI
+
+# Data downloaded from https://www.mediafire.com/file/bxee2utpqbi3u0n/data_anh_TheAnh.xlsx/file
+
+rm(list = ls())
+
+library(readxl)
+library(tidyverse)
+library(tidytext)
+library(stringi)
+
+# Load data: 
+
+read_excel("data_anh_TheAnh.xlsx", sheet = 1, skip = 0) -> data_TheAnh
+
+# Prepare data for ploting: 
+
+names(data_TheAnh) <- c("nganh", "Theo giá hiện thời", "Theo giá cố định")
+
+data_TheAnh %>% 
+  mutate(nganh_latin = stri_trans_general(nganh, "Latin-ASCII")) %>% 
+  mutate(nganh_latin = str_to_lower(nganh_latin)) %>% 
+  filter(str_detect(nganh_latin, "thuy san|tro giup|lam nghiep|xay dung|giao duc|che bien|phan phoi dien|GDP|luu tru|khai khoang|tai chinh|sua chua|bat dong san|nong nghiep|van tai")) %>% 
+  slice(-8) -> data_for_bar
+
+data_for_bar %>% 
+  arrange(`Theo giá cố định`) %>% 
+  mutate(nganh = factor(nganh, levels = nganh)) -> df_bar_fct
+
+df_bar_fct %>% 
+  select(-nganh_latin) %>% 
+  gather(type, value, -nganh) -> df_long
+
+df_long %>% 
+  mutate(type = factor(type, levels = c("Theo giá hiện thời", "Theo giá cố định"))) %>% 
+  ggplot(aes(nganh, value, fill = type)) + 
+  geom_col(position = "dodge", width = 0.75) + 
+  coord_flip() -> bar_draft
+
+library(showtext) # Package for using extra fonts. 
+
+my_colors <- c("#2E74C0", "#CB454A") # Set colors for bar. 
+
+my_font <- "Roboto Condensed"  # --> Set Ubunto Condensed font for our plot. 
+
+font_add_google(name = my_font, family = my_font)
+
+# Automatically use showtext to render text: 
+
+showtext_auto()
+
+library(scales)
+
+# Version 1 of barplot: 
+
+bar_draft + 
+  theme_minimal() + 
+  scale_y_continuous(limits = c(-0.1, 0.5), breaks = seq(-0.1, 0.5, 0.05), labels = percent, expand = c(0, 0)) + 
+  scale_fill_manual(values = my_colors, name = "", labels = c("Theo giá hiện thời", "Theo giá cố định")) + 
+  theme(legend.text = element_text(size = 10.5, color = "grey30", family = my_font)) +  
+  theme(legend.position = "top") + 
+  theme(legend.key.size = unit(0.3, "cm")) + 
+  guides(fill = guide_legend(reverse = TRUE)) + 
+  theme(plot.margin = unit(rep(0.7, 4), "cm")) + 
+  theme(panel.grid.minor = element_blank()) + 
+  theme(axis.title = element_blank()) + 
+  theme(axis.text.y = element_text(size = 10, color = "grey30", family = my_font)) + 
+  theme(axis.text.x = element_text(size = 12, color = "grey30", family = my_font)) + 
+  theme(strip.text = element_text(color = "grey20", size = 13, face = "bold", family = my_font)) + 
+  labs(title = "Hình 1: Mức tăng trưởng của một số nghành", 
+       caption = "Data Source: pham.theanh@neu.edu.vn") + 
+  theme(plot.title = element_text(size = 20, family = my_font)) + 
+  theme(plot.caption = element_text(size = 9, family = my_font, color = "grey30", vjust = -1)) + 
+  theme(plot.background = element_rect(fill = "seashell", color = NA))
+  
+  
+  
+  
+  
+  ## Flows
+ https://rpubs.com/chidungkt/921610?fbclid=IwAR1Q2pYtl6qgABGesxdHTbUJ9niktOsoOFL7TMMyN4--xwKfe4hBcXiabdo
+  # Clear work space: 
+rm(list = ls())
+
+# Load R packages: 
+library(tidyverse)
+library(lubridate)
+library(ggtext)
+library(glue)
+library(zoo)
+
+#----------------------------
+#  Prepare data for ploting
+#----------------------------
+
+# Load data: 
+
+owid_new_deaths_per_million_url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/jhu/new_deaths_per_million.csv"
+
+covid_deaths <- read_csv(owid_new_deaths_per_million_url)
+
+owid_new_cases_per_million_url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/jhu/new_cases_per_million.csv"
+
+covid_cases <- read_csv(owid_new_cases_per_million_url)
+
+# Set reporting period: 
+
+start_date <- ymd("2022-02-01")
+
+end_date <- ymd("2022-03-11")
+
+nations_included <- c("New Zealand", "Hong Kong")
+
+# Lag to shift cases: 
+
+lag_cases_deaths <- duration("14 days") 
+
+covid_deaths %>%
+  mutate(metric = "deaths") %>%
+  bind_rows(covid_cases %>% mutate(metric = "cases")) %>%
+  pivot_longer(cols = -c("date", "metric"), names_to = "region", values_to = "new_per_million") %>%
+  filter(region %in% nations_included) %>%
+  group_by(region) %>%
+  mutate(new_per_million = replace_na(new_per_million, 0),new_per_100k = new_per_million / 10) %>%
+  mutate(new_per_100k_7drollmean = rollmean(new_per_100k, 7, fill = NA, align = "right"),
+         new_per_million_7drollmean = rollmean(new_per_million, 7, fill = NA, align = "right")) %>%
+  arrange(region) %>%
+  mutate(date2 = case_when(metric == "cases" ~ date + lag_cases_deaths, TRUE ~ date)) %>%
+  filter(date2 >= start_date, date2 <= end_date) -> covid_df_long
+  
+# Colors for our plot: 
+
+color_cases_text <- "#258BC3"
+
+color_cases <- "#71C8E4"
+color_deaths <- "#CE3240" 
+
+bgr_color <- "#FFF1E5"
+
+library(showtext) # -> Package for using extra fonts. 
+
+my_font <- "Outfit"  # -> Set Outfit font for our plot. 
+
+font_add_google(name = my_font, family = my_font) # -> Load font for using. 
+
+# Automatically render text: 
+
+showtext_auto()
+
+scales_on_y <- seq(-80, 120, 20)
+
+y_text_label <- as.character(scales_on_y) %>% str_replace_all("-", "")
+
+y_text_color <- case_when(scales_on_y > 0 ~ color_cases, 
+                          scales_on_y < 0 ~ color_deaths, 
+                          TRUE ~ "grey30")
+
+p_title <- "Cases are translating into deaths at much higher rates in Hong Kong than\nin New Zealand, where elderly vaccination rates are much higher"
+
+p_subtitle <- "Daily <b style='color:#71C8E4'>cases</b> per 100,000 people, and daily <b style='color:#CE3240'>deaths </b>per 2 million"
+
+p_caption <- "Source: FT analysis of data from Johns Hopkins CSSE. Cases shifted forward to account for lag between infection and death"
+
+
+country_annotations <- data.frame(
+  region = c("Hong Kong", "New Zealand"),
+  label = c(
+    glue("<span style='color: black; font-size: 14pt; font-family: \"Outfit\"'>
+    Hong Kong</span><br>
+    66% of over-80s unvaccinated<br>when Omicron took off<br>
+    <span style='color: {color_deaths}; font-family: \"Outfit\"'>Case fatality
+         <br>rate: 4.7%</span>"),
+    glue("<span style='color: black; font-size: 14pt; font-family: \"Outfit\"'>
+    New Zealand</span><br>
+    2% unvaccinated<br>
+    <span style='color: {color_deaths}; font-family: \"Outfit\"'>CFR: 0.1%</span>")))
+
+# Replicate area plot originated by John Burn-Murdoch: 
+
+ggplot() + 
+  geom_area(data = covid_df_long %>% filter(metric == "cases"), aes(date2, new_per_100k_7drollmean), fill = color_cases) + 
+  geom_area(data = covid_df_long %>% filter(metric != "cases"), aes(date2, -2*new_per_million_7drollmean), fill = color_deaths) + 
+  facet_wrap(~ region) + 
+  scale_y_continuous(breaks = scales_on_y, labels = y_text_label, sec.axis = dup_axis()) + 
+  scale_x_date(breaks = ymd(c("2022-02-01", "2022-03-01")), date_labels = "%b") + 
+  theme(axis.title = element_blank()) + 
+  theme(panel.grid.minor = element_blank()) + 
+  theme(panel.grid.major.x = element_blank()) + 
+  theme(plot.margin = unit(rep(1, 4), "cm")) + 
+  theme(axis.text.y = element_text(color = y_text_color, family = my_font, size = 12)) + 
+  theme(axis.text.x = element_text(family = my_font, size = 12, hjust = -0.05)) + 
+  theme(plot.background = element_rect(color = NA, fill = bgr_color)) + 
+  theme(panel.background = element_rect(color = NA, fill = NA)) + 
+  theme(strip.text = element_blank()) + 
+  theme(axis.ticks.y = element_blank()) + 
+  theme(axis.ticks.length.x = unit(0.2, "cm")) + 
+  theme(axis.ticks.x = element_line(color = "grey60", size = 0.8)) + 
+  theme(panel.grid.major.y = element_line(size = 0.8, color = "grey90")) + 
+  labs(title = p_title, subtitle = p_subtitle, caption = p_caption) + 
+  theme(plot.title = element_text(family = my_font, size = 19, vjust = 2, hjust = 0)) + 
+  theme(plot.subtitle = element_markdown(color = "grey30", family = my_font, size = 16)) + 
+  theme(plot.caption = element_text(color = "grey30", family = my_font, size = 12, hjust = 0, vjust = -1.5)) + 
+  geom_richtext(data = country_annotations, 
+                aes(x = start_date, y = 115, label = label),
+                size = 4.8, 
+                label.size = NA, 
+                fill = NA,
+                family = my_font,
+                color = "grey30", 
+                hjust = 0, 
+                vjust = 1)
+
+# Make FT icon: 
+
+library(grid)
+
+grid.rect(x = 0, y = 1, width = 0.07, height = 0.01, just = c("left", "top"), gp = gpar(fill = "black", col = "black"))
