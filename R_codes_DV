@@ -1226,3 +1226,5 @@ red_icon <- "#ed1c24"
 
 grid.rect(x = 0, y = 1, width = 0.018, height = 0.008*8, just = c("left", "top"), gp = gpar(fill = red_icon, col = red_icon))
 
+# World Bank R Econ Visual Library
+https://worldbank.github.io/r-econ-visual-library/RegressionCoef.html
