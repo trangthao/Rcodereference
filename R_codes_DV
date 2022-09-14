@@ -1228,3 +1228,6 @@ grid.rect(x = 0, y = 1, width = 0.018, height = 0.008*8, just = c("left", "top")
 
 # World Bank R Econ Visual Library
 https://worldbank.github.io/r-econ-visual-library/RegressionCoef.html
+
+# Data-Viz for Development using WDI package in R
+https://medium.com/@yiningw/data-visualization-for-economics-using-wdi-package-in-r-d2da5a542f8b
